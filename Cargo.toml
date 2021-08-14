@@ -16,3 +16,8 @@ path = "src/main.rs"
 [dependencies]
 actix-web = "=4.0.0-beta.8"
 actix-http = "=3.0.0-beta.8"
+actix-rt = "2.2.0"
+
+[dev-dependencies]
+reqwest = "0.11"
+tokio = "1"
