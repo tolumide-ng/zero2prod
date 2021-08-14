@@ -1,7 +1,10 @@
 use zero2prod::run;
+use std::net::TcpListener;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    run("127.0.0.1:8000")?.await
+    let listener = TcpListener::bind("1276.0.0.1:0").expect("Failed to bind random port");
+
+    run(listener)?.await
 }
 
