@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -x
 set -eo pipefail
+if ! [ -x "$(command -v psql)" ]; then
+echo >&2 "Error: `psql` is not installed."
+exit 1
+fi
+if ! [ -x "$(command -v sqlx)" ]; then
+echo >&2 "Error: `sqlx` is not installed."
+echo >&2 "Use:"
+echo >&2 " cargo install --version=0.5.5 sqlx-cli --no-default-features --features postgres --locked"
+echo >&2 "to install it."
+exit 1
+fi
+
 # Check if a custom user has been set, otherwise default to 'postgres'
 DB_USER="${POSTGRES_USER:=postgres}"
 # Check if a custom database name has been set, otherwise default to 'newsletter'
@@ -14,10 +26,14 @@ docker run \
 -e POSTGRES_DB=${DB_NAME} \
 -p "${DB_PORT}":5432 \
 -d postgres \
-postgres -N 1000
 # ^ Increased maximum number of connections for testing purposes
-
-
-# make this file executable by running --
-# chmod +x scripts/init_db.sh
-# run --- scripts/init_db.sh
+postgres -N 1000
+# Keep pinging Postgres until it's ready to accept commands
+export PGPASSWORD="${DB_PASSWORD}"
+until psql -h "localhost" -U "${DB_PORT}" -d "postgres" -c '\q'; do
+>&2 echo "Postgres is still unavailable - sleeping"
+sleep 1
+done
+>&2 "Postgres is up and running on port ${DB_PORT}!"
+export DATABASE_URLpostgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
+sqlx databse create
