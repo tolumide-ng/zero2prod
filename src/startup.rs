@@ -2,10 +2,10 @@ use crate::routes::{health_check, subscribe};
 use actix_web::{App, HttpServer, web};
 use actix_web::dev::Server;
 use std::net::TcpListener;
-use sqlx::PgConnection;
+use sqlx::{PgPool};
 
 
-pub fn run(listner: TcpListener, connection: PgConnection) -> Result<Server, std::io::Error> {
+pub fn run(listner: TcpListener, connection: PgPool) -> Result<Server, std::io::Error> {
 
     let connection = web::Data::new(connection);
     let server = HttpServer::new( move || {
