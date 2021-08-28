@@ -1,6 +1,7 @@
 use std::{net::TcpListener};
-use sqlx::{self, PgPool};
-use zero2prod::{configuration::get_configuration, startup};
+use sqlx::{self, PgConnection, PgPool, Connection};
+use zero2prod::configuration::{get_configuration, DatabaseSettings};
+use zero2prod::startup;
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -33,6 +34,21 @@ async fn spawn_app() -> TestApp {
     }
 }
 
+
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    // Create Database
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres");
+
+    connection.execute(&*format!(r#"CREATE DATABASE "{}";"#, config.database_name)).await.expect("Failed to create database");
+
+    // Migrate database
+    let connection_pool = PgPool::connect(&config.connection_string()).await.expect("Failed to connect Postgres.");
+    sqlx::migrate!("./migrations").run(&connection_pool).await.expect("Failed to migrate the database");
+
+    connection_pool
+}
 
 
 #[actix_rt::test]
