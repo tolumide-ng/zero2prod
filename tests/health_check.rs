@@ -1,5 +1,5 @@
 use std::{net::TcpListener};
-use sqlx::{self, PgConnection, PgPool, Connection};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup;
 use uuid::Uuid;
@@ -20,9 +20,7 @@ async fn spawn_app() -> TestApp {
     let mut configuration = get_configuration().expect("Failed to read configuration");
     configuration.database.database_name = Uuid::new_v4().to_string();
 
-    let connection_pool = PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failed to connect to Postgres");
+    let connection_pool = configure_database(&configuration.database).await;
 
     let server = startup::run(listener, connection_pool.clone())
         .expect("Failed to connect to Postgres");
@@ -42,7 +40,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to connect to Postgres");
 
     connection.execute(&*format!(r#"CREATE DATABASE "{}";"#, config.database_name)).await.expect("Failed to create database");
-
+    
     // Migrate database
     let connection_pool = PgPool::connect(&config.connection_string()).await.expect("Failed to connect Postgres.");
     sqlx::migrate!("./migrations").run(&connection_pool).await.expect("Failed to migrate the database");
