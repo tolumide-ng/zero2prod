@@ -1,0 +1,27 @@
+jobs:
+  test:
+   name: test
+   runs-on: ubuntu-latest
+   services:
+     postgres:
+      image: postgres
+      ports:
+        - 5432:5432
+   steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Migrate database
+        run: |
+          sudo apt-get install libpq-dev -y
+          cargo install --version=0.5.7 sqlx-cli --no-default-features --features postgres
+          SKIP_DOCKER=true ./scripts/init_db.sh
+      - name: Check sqlx metadata file
+        # New step
+        run: cargo sqlx prepare --check -- --bin zero2prod
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
