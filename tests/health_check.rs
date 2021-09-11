@@ -3,7 +3,6 @@ use zero2prod::startup;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 // use std::detect::features;
-// use std::lazy::Lazy;
 use std::{net::TcpListener};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
