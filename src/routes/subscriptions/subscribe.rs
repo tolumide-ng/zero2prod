@@ -55,7 +55,7 @@ pub async fn insert_subscriber(pool: & PgPool, form: &FormData) -> Result<(), sq
         VALUES ($1, $2, $3, $4)
     "#, Uuid::new_v4(), form.email, form.name, Utc::now()).execute(pool).await.map_err(|e| {
         tracing::error!("Failed to execute query {:?}", e)
-    })?;
+    });
 
     Ok(())
 }
