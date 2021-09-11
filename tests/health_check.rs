@@ -2,8 +2,8 @@ use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::detect::features;
-use std::lazy::Lazy;
+// use std::detect::features;
+// use std::lazy::Lazy;
 use std::{net::TcpListener};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
@@ -16,10 +16,11 @@ static TRACKING: Lazy<()> = Lazy::new(|| {
 
     if std::env::var("TEST_LOG").is_ok() {
         let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
     } else {
         let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
     }
-    init_subscriber(subscriber);
 });
 
 pub struct TestApp {
