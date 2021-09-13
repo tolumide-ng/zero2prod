@@ -9,7 +9,7 @@ pub struct ApplicationSettings {
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
-    pub application_port: ApplicationSettings,
+    pub application: ApplicationSettings,
 }
 
 pub enum Environment {
@@ -55,8 +55,8 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 
     settings.merge(config::File::from(configuration_dir.join(environment.as_str())).required(true))?;
 
+    settings.merge(config::Environment::with_prefix("app").separator("__"))?;
 
-    settings.merge(config::File::with_name("configuration"))?;
     settings.try_into()
 }
 
