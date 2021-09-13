@@ -1,5 +1,5 @@
 # Builder stage
-FROM rust:1.53.0-slim AS builder
+FROM rust:1.53.0 AS builder
 
 WORKDIR /app
 COPY . .
@@ -7,7 +7,7 @@ ENV SQLX_OFFLINE true
 RUN cargo build --release
 
 # Runtime stage
-FROM rust:1.53.0 AS runtime
+FROM rust:1.53.0-slim AS runtime
 WORKDIR /app
 # copy the compuled binary from the builder environment
 # to our runtime environment
