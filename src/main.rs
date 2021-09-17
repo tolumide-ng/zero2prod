@@ -1,7 +1,7 @@
+use sqlx::postgres::PgPoolOptions;
 use zero2prod::telemetry::init_subscriber;
 use zero2prod::{startup::run, telemetry::get_subscriber};
 use zero2prod::configuration::get_configuration;
-use sqlx::PgPool;
 use std::net::TcpListener;
 
 
@@ -11,11 +11,11 @@ async fn main() -> std::io::Result<()> {
     init_subscriber(subscriber);
     
     let configuration = get_configuration().expect("Failed to read configurations");
-
-    println!("this is the configuration string {}", configuration.database.connection_string());
-
     
-    let connection_pool = PgPool::connect(&configuration.database.connection_string()).await.expect("Failed to connect to Postgres");
+    // let connection_pool = PgPool::connect(&configuration.database.connection_string()).await.expect("Failed to connect to Postgres");
+
+    let connection_pool = PgPoolOptions::new().connect_timeout(std::time::Duration::from_secs(2)).connect_with(configuration.database.with_db()).await.expect("Failed to connect to Postgres");
+    
     let address = format!("{}:{}", configuration.application.host, configuration.application.port);
 
 

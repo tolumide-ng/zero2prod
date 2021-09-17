@@ -1,5 +1,6 @@
 use std::convert::{TryInto, TryFrom};
 use serde_aux::field_attributes::deserialize_number_from_string;
+use sqlx::postgres::PgConnectOptions;
 
 #[derive(serde::Deserialize)]
 pub struct ApplicationSettings {
@@ -31,14 +32,14 @@ pub struct DatabaseSettings {
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self) -> String {
-        return format!("postgres://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database_name);
+
+    pub fn without_db(&self) -> PgConnectOptions {
+        PgConnectOptions::new().host(&self.host).username(&self.username).password(&self.password).port(self.port)
     }
 
-    pub fn connection_string_without_db(&self) -> String {
-        let DatabaseSettings {username, password, host, port, ..} = self;
-
-        format!("postgres://{}:{}@{}:{}", username, password, host, port)
+    
+    pub fn with_db(&self) -> PgConnectOptions {
+        self.without_db().database(&self.database_name)
     }
 }
 

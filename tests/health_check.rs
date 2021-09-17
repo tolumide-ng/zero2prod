@@ -54,14 +54,15 @@ async fn spawn_app() -> TestApp {
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create Database
-    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
         .expect("Failed to connect to Postgres");
 
     connection.execute(&*format!(r#"CREATE DATABASE "{}";"#, config.database_name)).await.expect("Failed to create database");
     
     // Migrate database
-    let connection_pool = PgPool::connect(&config.connection_string()).await.expect("Failed to connect Postgres.");
+    let connection_pool = PgPool::connect_with(config.with_db()).await.expect("Failed to connect Postgres.");
+    
     sqlx::migrate!("./migrations").run(&connection_pool).await.expect("Failed to migrate the database");
 
     connection_pool
@@ -102,7 +103,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(200, response.status().as_u16());
 
 
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription");
