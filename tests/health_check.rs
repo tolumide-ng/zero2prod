@@ -146,7 +146,6 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 #[actix_rt::test]
 async fn subscribe_returns_a_200_when_fields_are_present_but_emoty() {
     let app = spawn_app().await;
-
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
