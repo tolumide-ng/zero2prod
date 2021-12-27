@@ -1,8 +1,7 @@
 use tracing::{Subscriber, subscriber::set_global_default};
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::{fmt::MakeWriter, layer::SubscriberExt, EnvFilter, Registry};
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 
 /// Compose multiple layers into a `tracing`'s subscriber.
 ///
@@ -19,7 +18,7 @@ pub fn get_subscriber(name: String, env_filter: String, sink: impl MakeWriter + 
     Registry::default().with(env_filter).with(JsonStorageLayer).with(formatting_layer)
 }
 
-/// Register a subscrier as global
+/// Register a subscriber as global
 /// 
 /// It should only be called once!
 pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
