@@ -8,7 +8,7 @@ use uuid::Uuid;
 use once_cell::sync::Lazy;
 
 
-static TRACKING: Lazy<()> = Lazy::new(|| {
+static TRACING: Lazy<()> = Lazy::new(|| {
     // Lazy::force(this)
     let subscriber_name = "test".to_string();
     let default_filter_level = "debug".into();
@@ -30,7 +30,7 @@ pub struct TestApp {
 /// Spin up an instance of our application
 /// and returns an address e.g. (http://127.0.0.1:XXXX)
 async fn spawn_app() -> TestApp {
-    Lazy::force(&TRACKING);
+    Lazy::force(&TRACING);
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
@@ -92,7 +92,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let body = "name=le%20example&email=name%40example.com";
 
     // Act
-    let response = client.post(&format!("{}/subscribe", &app.address))
+    let response = client.post(&format!("{}/subscriptions", &app.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -127,7 +127,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
     for (invalid_body, error_message) in test_cases {
         // Act 
-        let response = client.post(&format!("{}/subscribe", &app.address))
+        let response = client.post(&format!("{}/subscriptions", &app.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -154,7 +154,7 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_emoty() {
     ];
 
     for (body, description) in test_cases {
-        let response = client.post(&format!("{}/subscribe", &app.address))
+        let response = client.post(&format!("{}/subscriptions", &app.address))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .body(body).send()
                 .await.expect("Failed to execute request");
