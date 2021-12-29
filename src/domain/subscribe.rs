@@ -22,4 +22,8 @@ impl SubscriberName {
             Self(s.trim().to_string())
         }
     }
+
+    pub fn inner_ref(&self) -> &str {
+        &self.0
+    }
 }
