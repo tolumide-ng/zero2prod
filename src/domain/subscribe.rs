@@ -22,8 +22,10 @@ impl SubscriberName {
             Self(s.trim().to_string())
         }
     }
+}
 
-    pub fn inner_ref(&self) -> &str {
+impl AsRef<str> for SubscriberName {
+    fn as_ref(&self) -> &str {
         &self.0
     }
 }
