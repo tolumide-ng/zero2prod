@@ -1,6 +1,6 @@
 use std::convert::{TryInto, TryFrom};
 use serde_aux::field_attributes::deserialize_number_from_string;
-use sqlx::{postgres::{PgConnectOptions, PgSslMode}, ConnectOptions};
+use sqlx::{postgres::{PgConnectOptions, PgSslMode}};
 
 #[derive(serde::Deserialize)]
 pub struct ApplicationSettings {

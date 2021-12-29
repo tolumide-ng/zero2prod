@@ -1,7 +1,6 @@
 use crate::routes::{prelude::*};
 use chrono::Utc;
 use sqlx::PgPool;
-use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 use tracing;
 
@@ -26,7 +25,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
 
     let new_subscriber = NewSubscriber {
         email: form.0.email,
-        name: SubscriberName::parse(form.0.name)
+        name: SubscriberName::parse(form.0.name).expect("Name validation failed")
     };
 
     match insert_subscriber(&pool, &new_subscriber).await {
