@@ -1,4 +1,4 @@
-use crate::routes::{prelude::*};
+use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail};
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -31,8 +31,13 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
         Err(_) => return HttpResponse::BadRequest().finish()
     };
 
+    let email = match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(_) => return HttpResponse::BadRequest().finish()
+    };
+
     let new_subscriber = NewSubscriber {
-        email: form.0.email,
+        email,
         name
     };
 
@@ -59,7 +64,7 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(), 
-        new_subscriber.email, 
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
