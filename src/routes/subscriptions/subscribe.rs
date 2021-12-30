@@ -1,4 +1,5 @@
 use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail};
+use std::convert::{TryInto, TryFrom};
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -26,8 +27,8 @@ pub struct FormData {
 )]
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
 
-    let new_subscriber = match parse_subscriber(form.0) {
-        Ok(subscriber) => subscriber,
+    let new_subscriber = match form.0.try_into() {
+        Ok(form) => form,
         Err(_) => {
             return HttpResponse::BadRequest().finish()
         }
@@ -43,15 +44,6 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
         }
     }
 }
-
-
-pub fn parse_subscriber(form: FormData) -> Result<NewSubscriber, String> {
-    let name = SubscriberName::parse(form.name)?;
-    let email = SubscriberEmail::parse(form.email)?;
-    
-    Ok(NewSubscriber {name, email})
-}
-
 
 
 #[tracing::instrument(
@@ -76,4 +68,14 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
     })?;
 
     Ok(())
+}
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(Self {email, name})
+    }
 }
