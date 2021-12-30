@@ -30,6 +30,7 @@ tracing-log = "0.1.2"
 serde-aux = "2.3.0"
 log = "0.4"
 unicode-segmentation = "1.8.0"
+validator = "0.14.0"
 [dependencies.sqlx]
 version = "0.5.9"
 default-features = false
