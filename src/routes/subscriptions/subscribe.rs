@@ -4,7 +4,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use tracing;
 
-use crate::domain::{subscribe::{NewSubscriber, SubscriberName}};
+use crate::domain::{
+    subscriber_name::SubscriberName,
+    new_subscriber::NewSubscriber,
+};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
