@@ -23,9 +23,14 @@ pub struct FormData {
 )]
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
 
+    let name = match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish()
+    };
+
     let new_subscriber = NewSubscriber {
         email: form.0.email,
-        name: SubscriberName::parse(form.0.name).expect("Name validation failed")
+        name
     };
 
     match insert_subscriber(&pool, &new_subscriber).await {
@@ -58,7 +63,7 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
     .execute(pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to execute query {:?}", e); 
+        tracing::error!("Failed to execute query: {:?}", e); 
         e
     })?;
 
