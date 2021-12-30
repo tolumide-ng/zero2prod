@@ -1,3 +1,4 @@
+use crate::domain::subscriber_email::SubscriberEmail;
 
 #[derive(serde::Deserialize)]
 pub struct EmailClientSettings {
@@ -5,8 +6,9 @@ pub struct EmailClientSettings {
     pub sender_email: String,
 }
 
-
-
-
-
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.sender_email.clone())
+    }
+}
 
