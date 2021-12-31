@@ -10,6 +10,18 @@ use crate::domain::{
     new_subscriber::NewSubscriber,
 };
 use crate::email::email_client::EmailClient;
+use crate::routes::subscriptions::helpers;
+
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(Self {email, name})
+    }
+}
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -26,7 +38,11 @@ pub struct FormData {
         subscriber_name = %form.name
     )
 )]
-pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>, email_client: web::Data<EmailClient>) -> HttpResponse {
+pub async fn subscribe(
+    form: web::Form<FormData>, 
+    pool: web::Data<PgPool>, 
+    email_client: web::Data<EmailClient>
+) -> HttpResponse {
 
     let new_subscriber = match form.0.try_into() {
         Ok(form) => form,
@@ -35,18 +51,15 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>, email
         }
     };
 
+    
     if insert_subscriber(&pool, &new_subscriber).await.is_err() {
-            return HttpResponse::InternalServerError().finish();
+        return HttpResponse::InternalServerError().finish();
     }
 
-    if email_client.send_email(
-        new_subscriber.email, 
-        "Welcome!", 
-        "Welcome to our newsletter!", 
-        "Welcome to our newsletter!", 
-    ).await.is_err() {
+    if helpers::send_confirmation_email(&email_client, new_subscriber).await.is_err() {
         return HttpResponse::InternalServerError().finish()
     }
+
     HttpResponse::Ok().finish()
 }
 
@@ -73,14 +86,4 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
     })?;
 
     Ok(())
-}
-
-impl TryFrom<FormData> for NewSubscriber {
-    type Error = String;
-
-    fn try_from(value: FormData) -> Result<Self, Self::Error> {
-        let name = SubscriberName::parse(value.name)?;
-        let email = SubscriberEmail::parse(value.email)?;
-        Ok(Self {email, name})
-    }
 }
