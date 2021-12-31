@@ -2,10 +2,8 @@ use zero2prod::configuration::{
     settings::get_configuration, 
     database_settings::DatabaseSettings,
 };
-use zero2prod::email::email_client::EmailClient;
-use zero2prod::startup::{run as startup};
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
-use std::{net::TcpListener};
+use zero2prod::startup::application::{Application, get_connection_pool};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
@@ -46,31 +44,33 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
 }
 
 /// Spin up an instance of our application
-/// and returns an address e.g. (http://127.0.0.1:XXXX)
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+    
+    let configuration = {
+        let mut c = get_configuration().expect("Failed to read configuration");
+        c.database.database_name = Uuid::new_v4().to_string();
+        // let port = listener.local_addr().unwrap().port();
+        // Use a random OS port 
+        c.application.port = 0;
+        c
+    };
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
-    let port = listener.local_addr().unwrap().port();
-    let address = format!("http://127.0.0.1:{}", port);
+    configure_database(&configuration.database).await;
 
-    let mut configuration = get_configuration().expect("Failed to read configuration");
-    configuration.database.database_name = Uuid::new_v4().to_string();
+    let application = Application::build(configuration.clone())
+        .await.expect("Failed to build application");
 
-    let connection_pool = configure_database(&configuration.database).await;
+    let address = format!("http://127.0.0.1:{}", application.port());
+    
+    // build(configuration).await.expect("Failed to build expectation");
+    let _ = tokio::spawn(application.run_until_stopped());
 
-    let sender_email = configuration.email_client.sender().expect("Invalid sender email address.");
-    let timeout = configuration.email_client.timeout();
 
-    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email, configuration.email_client.authorization_token, timeout);
-
-    let server = startup::run(listener, connection_pool.clone(), email_client)
-        .expect("Failed to connect to Postgres");
-    let _ = tokio::spawn(server);
 
     TestApp {
         address,
-        db_pool: connection_pool,
+        db_pool: get_connection_pool(&configuration.database),
     }
 }
 

@@ -6,7 +6,7 @@ use crate::configuration::{
     environment::Environment,
 };
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,

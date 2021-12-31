@@ -1,4 +1,6 @@
 use std::convert::{TryFrom};
+
+#[derive(Clone)]
 pub enum Environment {
     Local, 
     Production
