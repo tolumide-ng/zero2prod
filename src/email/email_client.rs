@@ -25,7 +25,7 @@ impl EmailClient {
         recipient: SubscriberEmail, 
         subject: &str, 
         html_content: &str, 
-        text_content: &str
+        text_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/email", &self.base_url);
 
@@ -54,8 +54,9 @@ impl EmailClient {
         base_url: String, 
         sender: SubscriberEmail,
         authorization_token: String,
+        timeout: std::time::Duration,
     ) -> Self {
-        let http_client = Client::builder().timeout(std::time::Duration::from_secs(10)).build().unwrap();
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
 
         Self {
             http_client,
@@ -110,15 +111,14 @@ mod tests {
     }
 
     fn email_client(base_url: String) -> EmailClient {
-        EmailClient::new(base_url, email(), Faker.fake())
+        EmailClient::new(base_url, email(), Faker.fake(), std::time::Duration::from_millis(200))
     }
 
     
     #[tokio::test]
     async fn send_email_sends_the_expected_request() {
         let mock_server = MockServer::start().await;
-        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(mock_server.uri(), sender, Faker.fake());
+        let email_client = email_client(mock_server.uri());
 
         Mock::given(header_exists("X-Postmark-Server-Token"))
             .and(header("Content-Type", "application/json"))
