@@ -1,24 +1,11 @@
-mod common;
-
-#[actix_rt::test]
-async fn health_check_works() {
-    // arrange
-    let app = common::spawn_app().await;
-    let client = reqwest::Client::new();
-
-    let response = client.get(&format!("{}/health_check", &app.address)).send().await.expect("Failed to execuet request");
-
-    // Act
-    assert!(response.status().is_success());
-    assert_eq!(Some(0), response.content_length());
-}
+use crate::helpers::spawn_app;
 
 
 
 #[actix_rt::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let app = common::spawn_app().await;
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
     let body = "name=le%20example&email=name%40example.com";
 
@@ -48,7 +35,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[actix_rt::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
-    let app = common::spawn_app().await;
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=sample", "missing the email"),
@@ -76,7 +63,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
 #[actix_rt::test]
 async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
-    let app = common::spawn_app().await;
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
