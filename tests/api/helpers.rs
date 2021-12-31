@@ -3,7 +3,7 @@ use zero2prod::configuration::{
     database_settings::DatabaseSettings,
 };
 use zero2prod::email::email_client::EmailClient;
-use zero2prod::startup;
+use zero2prod::startup::{run as startup};
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use std::{net::TcpListener};
 use uuid::Uuid;
@@ -25,8 +25,8 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 });
 
 pub struct TestApp {
-    pub db_pool: PgPool,
     pub address: String,
+    pub db_pool: PgPool,
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
