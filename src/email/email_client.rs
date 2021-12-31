@@ -70,7 +70,7 @@ mod tests {
     use fake::faker::internet::en::SafeEmail;
     use fake::{Faker, Fake};
     use fake::faker::lorem::en::{Paragraph, Sentence};
-    use wiremock::matchers::any;
+    use wiremock::matchers::{header, header_exists, path, method};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     
@@ -85,7 +85,14 @@ mod tests {
         let subject: String = Sentence(1..2).fake();
         let content: String = Paragraph(1..10).fake();
 
-        Mock::given(any()).respond_with(ResponseTemplate::new(200)).expect(1).mount(&mock_server).await;
+        Mock::given(header_exists("X-Postmark-Server-Token"))
+            .and(header("Content-Type", "application/json"))
+            .and(path("/email"))
+            .and(method("POST"))
+            .respond_with(ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
 
 
         let _ = email_client.send_email(subscriber_email, &subject, &content, &content).await;
