@@ -2,7 +2,7 @@ use reqwest::Url;
 use wiremock::{ResponseTemplate, Mock};
 use wiremock::matchers::{path, method};
 
-use crate::helpers::spawn_app;
+use crate::helpers::app::spawn_app;
 
 #[actix_rt::test]
 async fn confirmation_without_token_are_rejected_with_a_400() {
