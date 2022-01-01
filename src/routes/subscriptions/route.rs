@@ -60,7 +60,8 @@ pub async fn subscribe(
     if helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
-        base_url.0.as_str())
+        base_url.0.as_str(), 
+        "mytoken")
     .await.is_err() {
         return HttpResponse::InternalServerError().finish()
     }
