@@ -126,3 +126,27 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
 
     assert_eq!(html_link, text_link);
 }
+
+
+#[actix_rt::test]
+async fn subscribe_sends_a_confirmation_email_with_a_link() {
+    // Arrange
+    let app = spawn_app().await;
+    let body = "name=le%20gun&email=ursula_le_guin%40gmail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    // Act
+    app.post_subscription(body.into()).await;
+
+    // Assert
+    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let confirmation_link = app.get_confirmation_links(&email_request);
+
+    // The two links should be identical
+    assert_eq!(confirmation_link.html, confirmation_link.plain_text);
+}

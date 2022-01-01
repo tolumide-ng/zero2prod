@@ -8,6 +8,8 @@ use wiremock::MockServer;
 
 use crate::helpers::db::configure_database;
 
+use super::email::ConfirmationLinks;
+
 static TRACING: Lazy<()> = Lazy::new(|| {
     // Lazy::force(this)
     let subscriber_name = "test".to_string();
@@ -38,6 +40,34 @@ impl TestApp {
             .body(body)
             .send().await
             .expect("Failed to execute request.")
+    }
+
+    pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+        let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+          // Extract the link from on eof the request fields.
+    let get_link = |s: &str| {
+        let links: Vec<_> = linkify::LinkFinder::new()
+            .links(s)
+            .filter(|l| *l.kind() == linkify::LinkKind::Url)
+            .collect();
+        assert_eq!(links.len(), 1);
+
+        let raw_link =         links[0].as_str().to_owned();
+        let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
+        // let raw_confirmation_link = raw_link(&body["HtmlBody"].as_str().unwrap());
+        assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+        confirmation_link.set_port(Some(self.port)).unwrap();
+        confirmation_link
+    };
+
+    let html = get_link(&body["HtmlBody"].as_str().unwrap());
+    let plain_text = get_link(&body["TextBody"].as_str().unwrap());
+
+    ConfirmationLinks { html, plain_text}
+
+
+
     }
 }
 
