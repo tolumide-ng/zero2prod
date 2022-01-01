@@ -74,22 +74,23 @@ pub async fn subscribe(
     name = "Saving new subscriber details in the database",
     skip(new_subscriber, pool)
 )]
-pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -> Result<(), sqlx::Error> {
-    sqlx::query!(r#"
+pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -> Result<Uuid, sqlx::Error> {
+    let user = sqlx::query!(r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at, status)
-        VALUES ($1, $2, $3, $4, 'pending_confirmation')
+        VALUES ($1, $2, $3, $4, 'pending_confirmation') RETURNING id
         "#,
         Uuid::new_v4(), 
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(pool)
+    // .execute(pool)
+        .fetch_one(pool)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e); 
         e
     })?;
 
-    Ok(())
+    Ok(user.id)
 }

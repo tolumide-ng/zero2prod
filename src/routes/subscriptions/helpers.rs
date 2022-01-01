@@ -1,6 +1,8 @@
 use tracing;
 use crate::email::email_client::EmailClient;
 use crate::domain::new_subscriber::NewSubscriber;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 
 #[tracing::instrument(
     name = "Send a confirmation email to a new subscriber",
@@ -19,4 +21,14 @@ pub async fn send_confirmation_email(
 
     email_client
         .send_email(new_subscriber.email, "Welcome!", &html_body, &plain_body).await
+}
+
+
+/// Generate a random 25-characters-long case-sensitive subscription token.
+fn generate_subscription_token() -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(25)
+        .collect()
 }
