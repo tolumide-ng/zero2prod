@@ -1,4 +1,4 @@
-use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail};
+use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail, startup::run::ApplicationBaseUrl};
 use std::convert::{TryInto, TryFrom};
 use chrono::Utc;
 use sqlx::PgPool;
@@ -32,7 +32,7 @@ pub struct FormData {
 
 #[tracing::instrument (
     name = "Adding a new subscriber"
-    skip(form, pool, email_client),
+    skip(form, pool, email_client, base_url),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
@@ -41,7 +41,8 @@ pub struct FormData {
 pub async fn subscribe(
     form: web::Form<FormData>, 
     pool: web::Data<PgPool>, 
-    email_client: web::Data<EmailClient>
+    email_client: web::Data<EmailClient>,
+    base_url: web::Data<ApplicationBaseUrl>,
 ) -> HttpResponse {
 
     let new_subscriber = match form.0.try_into() {
@@ -56,7 +57,11 @@ pub async fn subscribe(
         return HttpResponse::InternalServerError().finish();
     }
 
-    if helpers::send_confirmation_email(&email_client, new_subscriber).await.is_err() {
+    if helpers::send_confirmation_email(
+        &email_client, 
+        new_subscriber, 
+        base_url.0.as_str())
+    .await.is_err() {
         return HttpResponse::InternalServerError().finish()
     }
 
