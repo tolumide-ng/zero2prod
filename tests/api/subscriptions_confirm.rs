@@ -1,5 +1,4 @@
 use reqwest::Url;
-use sqlx::Executor;
 use wiremock::{ResponseTemplate, Mock};
 use wiremock::matchers::{path, method};
 

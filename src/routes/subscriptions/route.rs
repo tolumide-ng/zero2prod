@@ -52,16 +52,26 @@ pub async fn subscribe(
         }
     };
 
+    let subscriber_id = match insert_subscriber(&pool, &new_subscriber).await {
+        Ok(subscriber_id) => {
+            subscriber_id
+        }
+        Err(_) => {
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    let subscription_token = helpers::generate_subscription_token();
     
-    if insert_subscriber(&pool, &new_subscriber).await.is_err() {
-        return HttpResponse::InternalServerError().finish();
+    if store_token(&pool, subscriber_id, &subscription_token).await.is_err() {
+        return HttpResponse::InternalServerError().finish()
     }
 
     if helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
         base_url.0.as_str(), 
-        "mytoken")
+        &subscription_token)
     .await.is_err() {
         return HttpResponse::InternalServerError().finish()
     }
@@ -84,13 +94,28 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    // .execute(pool)
         .fetch_one(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e); 
-        e
-    })?;
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e); 
+            e
+        })?;
 
     Ok(user.id)
+}
+
+
+#[tracing::instrument(
+    name = "Store subscription token in the database"
+    skip(subscription_token, pool)
+)]
+pub async fn store_token(pool: &PgPool, subscriber_id: Uuid, subscription_token: &str) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+        VALUES ($1, $2)"#,
+        subscription_token,
+        subscriber_id,
+    ).execute(pool).await.map(|e| {
+        tracing::error!("Failed to execute query: {:?}", e)
+    })
 }
