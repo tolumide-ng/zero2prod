@@ -10,7 +10,7 @@ use crate::domain::{
     new_subscriber::NewSubscriber,
 };
 use crate::email::email_client::EmailClient;
-use crate::routes::subscriptions::helpers;
+use crate::routes::subscriptions::{helpers, error};
 
 
 impl TryFrom<FormData> for NewSubscriber {
@@ -22,6 +22,8 @@ impl TryFrom<FormData> for NewSubscriber {
         Ok(Self {email, name})
     }
 }
+
+
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -66,9 +68,7 @@ pub async fn subscribe(
         }
     };
 
-    if store_token(&mut transaction, subscriber_id, &subscription_token).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
-    }
+    if store_token(&mut transaction, subscriber_id, &subscription_token).await.is_err() {};
 
     if transaction.commit().await.is_err() {
         return HttpResponse::InternalServerError().finish();
@@ -82,7 +82,7 @@ pub async fn subscribe(
     .await.is_err() {
         return HttpResponse::InternalServerError().finish()
     }
-
+    
     HttpResponse::Ok().finish()
 }
 
