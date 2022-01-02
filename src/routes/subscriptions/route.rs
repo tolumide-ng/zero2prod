@@ -50,10 +50,10 @@ pub async fn subscribe(
 ) -> Result<HttpResponse, SubscribeError> {
 
     let mut transaction = pool.begin().await.map_err(SubscribeError::PoolError)?;
-    let new_subscriber = form.0.try_into()?;
+    let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber).await.map_err(SubscribeError::InsertSubscriberError)?;
     let subscription_token = helpers::generate_subscription_token();
-    store_token(&mut transaction, subscriber_id, &subscription_token).await?;
+    store_token(&mut transaction, subscriber_id, &subscription_token).await.map_err(SubscribeError::InsertSubscriberError)?;
     transaction.commit().await.map_err(SubscribeError::TransactionCommitError)?;
 
     helpers::send_confirmation_email(
@@ -71,7 +71,8 @@ pub async fn subscribe(
     name = "Saving new subscriber details in the database",
     skip(new_subscriber, transaction)
 )]
-pub async fn insert_subscriber(
+pub async fn 
+insert_subscriber(
     transaction: &mut Transaction<'_, Postgres>,
     new_subscriber: &NewSubscriber
 ) -> Result<Uuid, sqlx::Error> {
