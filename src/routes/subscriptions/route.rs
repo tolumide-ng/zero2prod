@@ -12,6 +12,7 @@ use crate::domain::{
 use crate::email::email_client::EmailClient;
 use crate::routes::subscriptions::helpers;
 use crate::errors::store_token_error::StoreTokenError;
+use crate::errors::subscribe_error::SubscribeError;
 
 
 impl TryFrom<FormData> for NewSubscriber {
@@ -46,45 +47,23 @@ pub async fn subscribe(
     pool: web::Data<PgPool>, 
     email_client: web::Data<EmailClient>,
     base_url: web::Data<ApplicationBaseUrl>,
-) -> HttpResponse {
+) -> Result<HttpResponse, SubscribeError> {
 
-    let new_subscriber = match form.0.try_into() {
-        Ok(form) => form,
-        Err(_) => {
-            return HttpResponse::BadRequest().finish()
-        }
-    };
-
-    let mut transaction = match pool.begin().await {
-        Ok(transaction) => transaction,
-        Err(_) => return HttpResponse::InternalServerError().finish()
-    };
-
+    let mut transaction = pool.begin().await.map_err(SubscribeError::PoolError)?;
+    let new_subscriber = form.0.try_into()?;
+    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber).await.map_err(SubscribeError::InsertSubscriberError)?;
     let subscription_token = helpers::generate_subscription_token();
-    
-    let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
-        Ok(subscriber_id) => subscriber_id,
-        Err(_) => {
-            return HttpResponse::InternalServerError().finish();
-        }
-    };
+    store_token(&mut transaction, subscriber_id, &subscription_token).await?;
+    transaction.commit().await.map_err(SubscribeError::TransactionCommitError)?;
 
-    if store_token(&mut transaction, subscriber_id, &subscription_token).await.is_err() {};
-
-    if transaction.commit().await.is_err() {
-        return HttpResponse::InternalServerError().finish();
-    }
-
-    if helpers::send_confirmation_email(
+    helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
         base_url.0.as_str(), 
         &subscription_token)
-    .await.is_err() {
-        return HttpResponse::InternalServerError().finish()
-    }
+    .await?;
     
-    HttpResponse::Ok().finish()
+    Ok(HttpResponse::Ok().finish())
 }
 
 
