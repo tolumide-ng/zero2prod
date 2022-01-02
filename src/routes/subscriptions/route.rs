@@ -49,19 +49,46 @@ pub async fn subscribe(
     base_url: web::Data<ApplicationBaseUrl>,
 ) -> Result<HttpResponse, SubscribeError> {
 
-    let mut transaction = pool.begin().await.map_err(SubscribeError::PoolError)?;
-    let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
-    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber).await.map_err(SubscribeError::InsertSubscriberError)?;
+    let mut transaction = pool.begin()
+        .await.map_err(|e| {
+            SubscribeError::UnexpectedError(
+                Box::new(e), 
+                "Failed to acquire a Postgres connection from the pool".into()
+        )})?;
+
+    let new_subscriber = form.0.try_into().map_err( |e| SubscribeError::ValidationError(e))?;
+
+    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
+        .await.map_err(|e| {
+            SubscribeError::UnexpectedError(
+                Box::new(e), 
+                "Failed to insert new subscriber in the database.".into()
+        )})?;
+
     let subscription_token = helpers::generate_subscription_token();
-    store_token(&mut transaction, subscriber_id, &subscription_token).await.map_err(SubscribeError::InsertSubscriberError)?;
-    transaction.commit().await.map_err(SubscribeError::TransactionCommitError)?;
+    store_token(&mut transaction, subscriber_id, &subscription_token)
+        .await.map_err(|e| {
+            SubscribeError::UnexpectedError(
+                Box::new(e), 
+                "Failed to store the confirmation token for a new subscriber.".into()
+        )})?;
+    transaction.commit()
+        .await.map_err(|e| {
+            SubscribeError::UnexpectedError(
+                Box::new(e), 
+                "Failed to commit SQL transaction to store a new subscriber".into()
+        )})?;
 
     helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
         base_url.0.as_str(), 
         &subscription_token)
-    .await?;
+    .await.map_err(|e| {
+            SubscribeError::UnexpectedError(
+                Box::new(e), 
+                "Failed to send a confirmation email".into()
+        )})?;
     
     Ok(HttpResponse::Ok().finish())
 }
