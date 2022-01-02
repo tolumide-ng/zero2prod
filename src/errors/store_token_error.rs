@@ -1,6 +1,6 @@
 use actix_web::ResponseError;
 
-pub struct StoreTokenError(sqlx::Error);
+pub struct StoreTokenError(pub sqlx::Error);
 
 impl std::fmt::Display for StoreTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,7 +27,6 @@ impl std::error::Error for StoreTokenError {
         Some(&self.0)
     }
 }
-
 
 fn error_chain_fmt(
     e: &impl std::error::Error, 

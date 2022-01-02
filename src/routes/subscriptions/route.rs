@@ -10,7 +10,8 @@ use crate::domain::{
     new_subscriber::NewSubscriber,
 };
 use crate::email::email_client::EmailClient;
-use crate::routes::subscriptions::{helpers, error};
+use crate::routes::subscriptions::helpers;
+use crate::errors::store_token_error::StoreTokenError;
 
 
 impl TryFrom<FormData> for NewSubscriber {
@@ -122,15 +123,21 @@ pub async fn insert_subscriber(
 pub async fn store_token(
     transaction: &mut Transaction<'_, Postgres>, 
     subscriber_id: Uuid, 
-    subscription_token: &str) -> Result<(), sqlx::Error> {
+    subscription_token: &str
+) -> Result<(), StoreTokenError> {
     sqlx::query!(
-        r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id)
-        VALUES ($1, $2)"#,
+        r#"
+    INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+    VALUES ($1, $2)
+        "#,
         subscription_token,
         subscriber_id,
-    ).execute(transaction).await.map(|e| {
-        tracing::error!("Failed to execute query: {:?}", e)
-    })
+    )
+        .execute(transaction)
+        .await
+        .map_err(StoreTokenError)?;
+        
+        Ok(())
 }
 
 enum SubscriberStatus {
