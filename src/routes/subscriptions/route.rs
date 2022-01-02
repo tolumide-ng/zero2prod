@@ -1,9 +1,10 @@
 use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail, startup::run::ApplicationBaseUrl};
-use std::convert::{TryInto, TryFrom};
 use chrono::Utc;
+use std::convert::{TryInto, TryFrom};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 use tracing;
+use anyhow::{Context, Result};
 
 use crate::domain::{
     subscriber_name::SubscriberName,
@@ -50,26 +51,27 @@ pub async fn subscribe(
 ) -> Result<HttpResponse, SubscribeError> {
 
     let mut transaction = pool.begin()
+        .await
         .context("Failed to acquire a Postgres connection from the pool")?;
 
     let new_subscriber = form.0.try_into().map_err( |e| SubscribeError::ValidationError(e))?;
 
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
-        .context("Failed to insert new subscriber in the database.")?;
+        .await.context("Failed to insert new subscriber in the database.")?;
 
     let subscription_token = helpers::generate_subscription_token();
     store_token(&mut transaction, subscriber_id, &subscription_token)
-        .context("Failed to store the confirmation token for a new subscriber.")?;
+        .await.context("Failed to store the confirmation token for a new subscriber.")?;
 
     transaction.commit()
-        .context("Failed to commit SQL transaction to store a new subscriber")?;
+        .await.context("Failed to commit SQL transaction to store a new subscriber")?;
 
     helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
         base_url.0.as_str(), 
         &subscription_token)
-    .context("Failed to send a confirmation email")?;
+    .await.context("Failed to send a confirmation email")?;
     
     Ok(HttpResponse::Ok().finish())
 }
@@ -123,7 +125,10 @@ pub async fn store_token(
     )
         .execute(transaction)
         .await
-        .map_err(StoreTokenError)?;
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            StoreTokenError(e)
+        })?;
         
         Ok(())
 }

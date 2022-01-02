@@ -2742,6 +2742,7 @@ dependencies = [
  "actix-http",
  "actix-rt",
  "actix-web",
+ "anyhow",
  "chrono",
  "claim",
  "config 0.11.0",
