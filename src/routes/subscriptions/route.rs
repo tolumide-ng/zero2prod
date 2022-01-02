@@ -50,45 +50,26 @@ pub async fn subscribe(
 ) -> Result<HttpResponse, SubscribeError> {
 
     let mut transaction = pool.begin()
-        .await.map_err(|e| {
-            SubscribeError::UnexpectedError(
-                Box::new(e), 
-                "Failed to acquire a Postgres connection from the pool".into()
-        )})?;
+        .context("Failed to acquire a Postgres connection from the pool")?;
 
     let new_subscriber = form.0.try_into().map_err( |e| SubscribeError::ValidationError(e))?;
 
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
-        .await.map_err(|e| {
-            SubscribeError::UnexpectedError(
-                Box::new(e), 
-                "Failed to insert new subscriber in the database.".into()
-        )})?;
+        .context("Failed to insert new subscriber in the database.")?;
 
     let subscription_token = helpers::generate_subscription_token();
     store_token(&mut transaction, subscriber_id, &subscription_token)
-        .await.map_err(|e| {
-            SubscribeError::UnexpectedError(
-                Box::new(e), 
-                "Failed to store the confirmation token for a new subscriber.".into()
-        )})?;
+        .context("Failed to store the confirmation token for a new subscriber.")?;
+
     transaction.commit()
-        .await.map_err(|e| {
-            SubscribeError::UnexpectedError(
-                Box::new(e), 
-                "Failed to commit SQL transaction to store a new subscriber".into()
-        )})?;
+        .context("Failed to commit SQL transaction to store a new subscriber")?;
 
     helpers::send_confirmation_email(
         &email_client, 
         new_subscriber, 
         base_url.0.as_str(), 
         &subscription_token)
-    .await.map_err(|e| {
-            SubscribeError::UnexpectedError(
-                Box::new(e), 
-                "Failed to send a confirmation email".into()
-        )})?;
+    .context("Failed to send a confirmation email")?;
     
     Ok(HttpResponse::Ok().finish())
 }

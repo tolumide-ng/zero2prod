@@ -9,8 +9,8 @@ pub enum SubscribeError {
     ValidationError(String),
     // #[error(transparent)]
     // UnexpectedError(#[from] Box<dyn std::error::Error>),
-    #[error("{1}")]
-    UnexpectedError(#[source] Box<dyn std::error::Error>, String)
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error)
 }
 
 
@@ -26,7 +26,7 @@ impl ResponseError for SubscribeError {
         match self {
             SubscribeError::ValidationError(_) => StatusCode::BAD_REQUEST,
             // SubscribeError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            SubscribeError::UnexpectedError(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
+            SubscribeError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
