@@ -1,7 +1,7 @@
 use crate::{routes::{prelude::*}, domain::subscriber_email::SubscriberEmail, startup::run::ApplicationBaseUrl};
 use std::convert::{TryInto, TryFrom};
 use chrono::Utc;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 use tracing;
 
@@ -52,19 +52,26 @@ pub async fn subscribe(
         }
     };
 
-    let subscriber_id = match insert_subscriber(&pool, &new_subscriber).await {
-        Ok(subscriber_id) => {
-            subscriber_id
-        }
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(_) => return HttpResponse::InternalServerError().finish()
+    };
+
+    let subscription_token = helpers::generate_subscription_token();
+    
+    let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
+        Ok(subscriber_id) => subscriber_id,
         Err(_) => {
             return HttpResponse::InternalServerError().finish();
         }
     };
 
-    let subscription_token = helpers::generate_subscription_token();
-    
-    if store_token(&pool, subscriber_id, &subscription_token).await.is_err() {
+    if store_token(&mut transaction, subscriber_id, &subscription_token).await.is_err() {
         return HttpResponse::InternalServerError().finish()
+    }
+
+    if transaction.commit().await.is_err() {
+        return HttpResponse::InternalServerError().finish();
     }
 
     if helpers::send_confirmation_email(
@@ -82,9 +89,12 @@ pub async fn subscribe(
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(new_subscriber, pool)
+    skip(new_subscriber, transaction)
 )]
-pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -> Result<Uuid, sqlx::Error> {
+pub async fn insert_subscriber(
+    transaction: &mut Transaction<'_, Postgres>,
+    new_subscriber: &NewSubscriber
+) -> Result<Uuid, sqlx::Error> {
     let user = sqlx::query!(r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at, status)
         VALUES ($1, $2, $3, $4, 'pending_confirmation') RETURNING id
@@ -94,7 +104,7 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-        .fetch_one(pool)
+        .fetch_one(transaction)
         .await
         .map_err(|e| {
             tracing::error!("Failed to execute query: {:?}", e); 
@@ -107,15 +117,60 @@ pub async fn insert_subscriber(pool: & PgPool, new_subscriber: &NewSubscriber) -
 
 #[tracing::instrument(
     name = "Store subscription token in the database"
-    skip(subscription_token, pool)
+    skip(subscription_token, transaction)
 )]
-pub async fn store_token(pool: &PgPool, subscriber_id: Uuid, subscription_token: &str) -> Result<(), sqlx::Error> {
+pub async fn store_token(
+    transaction: &mut Transaction<'_, Postgres>, 
+    subscriber_id: Uuid, 
+    subscription_token: &str) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id)
         VALUES ($1, $2)"#,
         subscription_token,
         subscriber_id,
-    ).execute(pool).await.map(|e| {
+    ).execute(transaction).await.map(|e| {
         tracing::error!("Failed to execute query: {:?}", e)
+    })
+}
+
+enum SubscriberStatus {
+    Pending,
+    Confirmed,
+    NotExist
+}
+
+impl SubscriberStatus {
+    pub fn new(state: &str) -> Self {
+        match state {
+            "pending_confirmation" => SubscriberStatus::Pending,
+            "confirmed" => SubscriberStatus::Confirmed,
+            _ => SubscriberStatus::NotExist
+        }
+    }
+}
+
+pub struct SubscriberState {
+    status: SubscriberStatus,
+    id: Option<Uuid>,
+}
+
+#[tracing::instrument(
+    name = "Check if subscriber email already exists in the database"
+    skip(transaction, new_subscriber)
+)]
+pub async fn check_subscriber(
+    transaction: &mut Transaction<'_, Postgres>, 
+    new_subscriber: &NewSubscriber) -> Result<SubscriberState, sqlx::Error> {
+    let user = sqlx::query!(
+        r#"SELECT email, id, status FROM subscriptions WHERE email = $1"#, 
+        new_subscriber.email.as_ref())
+        .fetch_one(transaction).await.map_err(|e| {
+            tracing::error!("Failed to execute query {}", e); 
+            e
+        })?;
+
+    Ok(SubscriberState {
+        status: SubscriberStatus::new(user.status.as_str()),
+        id: Some(user.id)
     })
 }
