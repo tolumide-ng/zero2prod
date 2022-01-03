@@ -1,6 +1,9 @@
 use actix_web::{HttpResponse, ResponseError, web};
+use anyhow::Context;
 use sqlx::PgPool;
 use actix_web::http::StatusCode;
+use crate::domain::subscriber_email::SubscriberEmail;
+use crate::email::email_client::EmailClient;
 
 use crate::errors::helper::error_chain_fmt;
 
@@ -18,7 +21,7 @@ pub struct BodyData {
 }
 
 struct ConfirmedSubscriber {
-    email: String,
+    email: SubscriberEmail,
 }
 
 #[derive(thiserror::Error)]
@@ -46,21 +49,46 @@ impl ResponseError for PublishError {
     name = "Get confirmed subscribers", skip(pool)
 )]
 async fn get_confirmed_subscribers(pool: &PgPool) -> Result<Vec<ConfirmedSubscriber>, anyhow::Error> {
+
+    struct Row {
+        email: String
+    }
+
     let rows = sqlx::query_as!(
-        ConfirmedSubscriber,
+        Row,
         r#"
-        SELECT email FROM subscriptions WHERE status = 'confirmed'
+        SELECT email 
+        FROM subscriptions 
+        WHERE status = 'confirmed'
         "#,
     ).fetch_all(pool)
         .await?;
 
-    Ok(rows)
+    let confirmed_subscribers = rows
+        .into_iter().map(|r| ConfirmedSubscriber {
+            email: SubscriberEmail::parse(r.email).unwrap(),
+        }).collect();
+
+    Ok(confirmed_subscribers)
 }
 
 pub async fn publish_newsletter(
-    _body: web::Json<BodyData>, 
-    pool: web::Data<PgPool>
+    body: web::Json<BodyData>, 
+    pool: web::Data<PgPool>,
+    email_client: web::Data<EmailClient>,
 ) -> Result<HttpResponse, PublishError> {
-    let _subsribers = get_confirmed_subscribers(&pool).await?;
+    let subscribers = get_confirmed_subscribers(&pool).await?;
+
+    for subscriber in subscribers {
+        email_client.send_email(
+            subscriber.email,
+            &body.title,
+            &body.content.html,
+            &body.content.text
+        ).await
+            .with_context(|| {
+                format!("Failed to sned newsletter issue to {}", subscriber.email)
+            })?;
+    }
     Ok(HttpResponse::Ok().finish())
 }
