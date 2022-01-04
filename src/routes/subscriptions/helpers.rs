@@ -20,7 +20,7 @@ pub async fn send_confirmation_email(
     let plain_body = &format!("Welcome to our newsletter!\nVisit {} to confirm your subscription.", confirmation_link);
 
     email_client
-        .send_email(new_subscriber.email, "Welcome!", &html_body, &plain_body).await
+        .send_email(&new_subscriber.email, "Welcome!", &html_body, &plain_body).await
 }
 
 
