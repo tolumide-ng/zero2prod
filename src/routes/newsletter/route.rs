@@ -6,7 +6,7 @@ use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
 use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
 use crate::errors::publish_error::PublishError;
-use crate::helpers::authentication::{Credentials};
+use crate::helpers::authentication::{basic_authentication, Credentials};
 
 
 #[tracing::instrument(
@@ -75,9 +75,4 @@ pub async fn publish_newsletter(
         }
     }
     Ok(HttpResponse::Ok().finish())
-}
-
-
-fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
-    todo!()
 }

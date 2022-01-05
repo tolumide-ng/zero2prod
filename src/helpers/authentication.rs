@@ -3,12 +3,12 @@ use secrecy::Secret;
 use anyhow::Context;
 
 pub struct Credentials {
-    username: String,
-    password: Secret<String>
+    pub username: String,
+    pub password: Secret<String>
 }
 
 
-fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
+pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
     // The header value, if present, must be a valid UTF8 string
     let header_value = headers
         .get("Authentication")
