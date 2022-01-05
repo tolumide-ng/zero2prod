@@ -70,3 +70,4 @@ pub async fn publish_newsletter(
     }
     Ok(HttpResponse::Ok().finish())
 }
+
