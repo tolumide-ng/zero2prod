@@ -5,8 +5,10 @@ use crate::errors::helper::error_chain_fmt;
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
+    #[error("Authentication failed.")]
+    AuthError(#[source] anyhow::Error),
     #[error(transparent)]
-    UnexpectedError(#[from] anyhow::Error),
+    UnexpectedError(#[from] anyhow::Error)
 }
 
 impl std::fmt::Debug for PublishError {
@@ -20,6 +22,8 @@ impl ResponseError for PublishError {
     fn status_code(&self) -> StatusCode {
         match self {
             PublishError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            // Returns a 401 for auth errors
+            PublishError::AuthError(_) => StatusCode::UNAUTHORIZED,
         }
     }
 }
