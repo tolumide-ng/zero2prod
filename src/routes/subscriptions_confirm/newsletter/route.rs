@@ -1,10 +1,12 @@
 use actix_web::{HttpResponse, web};
-use actix_web::http::header::{HeaderMap, HeaderValue};
+use actix_web::http::header::{HeaderMap};
 use anyhow::Context;
 use sqlx::PgPool;
 use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
-use crate::routes::newsletter::helper::{ConfirmedSubscriber, Credentials, PublishError, BodyData};
+use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
+use crate::errors::publish_error::PublishError;
+use crate::helpers::authentication::{Credentials};
 
 
 #[tracing::instrument(

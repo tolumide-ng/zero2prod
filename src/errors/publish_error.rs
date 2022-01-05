@@ -1,37 +1,12 @@
-use actix_web::{ResponseError};
+use actix_web::ResponseError;
 use actix_web::http::StatusCode;
-use secrecy::Secret;
 
-use crate::domain::subscriber_email::SubscriberEmail;
 use crate::errors::helper::error_chain_fmt;
-
-
-#[derive(serde::Deserialize)]
-pub struct Content {
-    pub html: String,
-    pub text: String,
-}
-
-
-#[derive(serde::Deserialize)]
-pub struct BodyData {
-    pub title: String,
-    pub content: Content
-}
-
-pub struct ConfirmedSubscriber {
-    pub email: SubscriberEmail,
-}
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
-}
-
-pub struct Credentials {
-    username: String,
-    password: Secret<String>
 }
 
 impl std::fmt::Debug for PublishError {
