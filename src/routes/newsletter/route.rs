@@ -40,7 +40,9 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
     request: web::HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials = basic_authentication(request.headers());
+    let _credentials = basic_authentication(request.headers())
+        .map_err(PublishError::AuthError)?;
+
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
     
