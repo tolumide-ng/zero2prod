@@ -1,10 +1,10 @@
 use actix_web::{HttpResponse, web};
+use actix_web::http::header::{HeaderMap, HeaderValue};
 use anyhow::Context;
 use sqlx::PgPool;
 use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
-use crate::routes::newsletter::helper::{ConfirmedSubscriber, PublishError, BodyData};
-
+use crate::routes::newsletter::helper::{ConfirmedSubscriber, Credentials, PublishError, BodyData};
 
 
 #[tracing::instrument(
@@ -36,7 +36,9 @@ pub async fn publish_newsletter(
     body: web::Json<BodyData>, 
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
+    request: web::HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
+    let _credentials = basic_authentication(request.headers());
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
     
@@ -71,3 +73,7 @@ pub async fn publish_newsletter(
     Ok(HttpResponse::Ok().finish())
 }
 
+
+fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
+    todo!()
+}

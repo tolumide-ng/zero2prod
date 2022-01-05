@@ -1,7 +1,8 @@
 use actix_web::{ResponseError};
 use actix_web::http::StatusCode;
-use crate::domain::subscriber_email::SubscriberEmail;
+use secrecy::Secret;
 
+use crate::domain::subscriber_email::SubscriberEmail;
 use crate::errors::helper::error_chain_fmt;
 
 
@@ -26,6 +27,11 @@ pub struct ConfirmedSubscriber {
 pub enum PublishError {
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
+}
+
+pub struct Credentials {
+    username: String,
+    password: Secret<String>
 }
 
 impl std::fmt::Debug for PublishError {
