@@ -17,7 +17,7 @@ impl TestUser {
         }
     }
 
-    async fn store(&mut self, pool: &PgPool) {
+    pub async fn store(&mut self, pool: &PgPool) {
         let hash = sha3::Sha3_256::digest(self.password.as_bytes());
         let hash = format!("{:x}", hash);
         let user = sqlx::query!(

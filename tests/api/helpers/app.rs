@@ -7,9 +7,8 @@ use sqlx::{PgPool};
 use wiremock::MockServer;
 
 use crate::helpers::db::configure_database;
-
-use super::db::add_test_user;
-use super::email::ConfirmationLinks;
+use crate::helpers::email::ConfirmationLinks;
+use crate::helpers::user::TestUser;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     // Lazy::force(this)
@@ -31,6 +30,7 @@ pub struct TestApp {
     pub db_pool: PgPool,
     pub email_server: MockServer,
     pub port: u16,
+    pub test_user: TestUser,
 }
 
 impl TestApp {
@@ -69,7 +69,9 @@ impl TestApp {
     }
 
     pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
-        let (username, password) = self.test_user().await;
+        // destructure username and password of the test_user
+        let TestUser {username, password, ..} = &self.test_user;
+
         reqwest::Client::new()
             .post(&format!("{}/newsletters", &self.address))
             .basic_auth(username, Some(password))
@@ -77,15 +79,6 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute request.")
-    }
-
-    pub async fn test_user(&self) -> (String, String) {
-        let row = sqlx::query!("SELECT username, hash FROM users LIMIT 1")
-            .fetch_one(&self.db_pool)
-            .await
-            .expect("Failed to create test users.");
-
-        (row.username, row.password)
     }
 }
 
@@ -118,16 +111,17 @@ pub async fn spawn_app() -> TestApp {
     // build(configuration).await.expect("Failed to build expectation");
     let _ = tokio::spawn(application.run_until_stopped());
 
-
+    let db_pool = get_connection_pool(&configuration.database);
+    let mut test_user = TestUser::generate();
+    test_user.store(&db_pool);
 
     let test_app = TestApp {
         address,
-        db_pool: get_connection_pool(&configuration.database),
+        db_pool,
         email_server,
         port: application_port,
+        test_user
     };
-
-    add_test_user(&test_app.db_pool).await;
 
     test_app
 }

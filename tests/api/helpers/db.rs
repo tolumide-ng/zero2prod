@@ -21,14 +21,3 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
 
     connection_pool
 }
-
-pub async fn add_test_user(pool: &PgPool) {
-    sqlx::query!(
-        "INSERT INTO users (username, hash) VALUES ($1, $2)",
-        Uuid::new_v4().to_string(),
-        Uuid::new_v4().to_string()
-    )
-        .execute(pool)
-        .await
-        .expect("Failed to create test users.");
-}
