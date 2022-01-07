@@ -87,10 +87,10 @@ insert_subscriber(
     new_subscriber: &NewSubscriber
 ) -> Result<Uuid, sqlx::Error> {
     let user = sqlx::query!(r#"
-        INSERT INTO subscriptions (id, email, name, subscribed_at, status)
-        VALUES ($1, $2, $3, $4, 'pending_confirmation') RETURNING id
+        INSERT INTO subscriptions (email, name, subscribed_at, status)
+        VALUES ($1, $2, $3, 'pending_confirmation') RETURNING id
         "#,
-        Uuid::new_v4(), 
+        // Uuid::new_v4(), 
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
