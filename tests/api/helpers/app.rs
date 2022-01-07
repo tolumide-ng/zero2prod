@@ -8,6 +8,7 @@ use wiremock::MockServer;
 
 use crate::helpers::db::configure_database;
 
+use super::db::add_test_user;
 use super::email::ConfirmationLinks;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
@@ -109,11 +110,15 @@ pub async fn spawn_app() -> TestApp {
 
 
 
-    TestApp {
+    let test_app = TestApp {
         address,
         db_pool: get_connection_pool(&configuration.database),
         email_server,
         port: application_port,
-    }
+    };
+
+    add_test_user(&test_app.db_pool).await;
+
+    test_app
 }
 
