@@ -38,7 +38,7 @@ thiserror = "1"
 anyhow = "1"
 secrecy = "0.8.0"
 base64 = "0.13"
-sha3 = "0.3"
+sha3 = "0.9"
 [dependencies.sqlx]
 version = "0.5.9"
 default-features = false
