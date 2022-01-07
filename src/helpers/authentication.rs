@@ -1,5 +1,5 @@
 use actix_web::http::header::{HeaderMap};
-use secrecy::Secret;
+use secrecy::{Secret};
 use anyhow::Context;
 
 pub struct Credentials {
@@ -40,3 +40,4 @@ pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::
 
     Ok(Credentials {username, password: Secret::new(password)})
 }
+

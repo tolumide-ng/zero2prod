@@ -1,12 +1,12 @@
 use actix_web::{HttpResponse, web};
-use actix_web::http::header::{HeaderMap};
 use anyhow::Context;
 use sqlx::PgPool;
 use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
 use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
 use crate::errors::publish_error::PublishError;
-use crate::helpers::authentication::{basic_authentication, Credentials};
+use crate::helpers::authentication::{basic_authentication};
+use crate::routes::auth::helper::validate_credentials;
 
 
 #[tracing::instrument(
@@ -34,16 +34,29 @@ async fn get_confirmed_subscribers(pool: &PgPool) -> Result<Vec<Result<Confirmed
     Ok(confirmed_subscribers)
 }
 
+
+#[tracing::instrument(
+    name = "Publish a neslietter issue",
+    skip(body, pool, email_client, request),
+    fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
+)]
 pub async fn publish_newsletter(
     body: web::Json<BodyData>, 
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     request: web::HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials = basic_authentication(request.headers())
+    let credentials = basic_authentication(request.headers())
         .map_err(PublishError::AuthError)?;
 
-    let subscribers = get_confirmed_subscribers(&pool).await?;
+        
+        tracing::Span::current().record(
+            "username", 
+            &tracing::field::display(&credentials.username));
+            
+        let user_id = validate_credentials(credentials, &pool).await?;
+        tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
+        let subscribers = get_confirmed_subscribers(&pool).await?;
 
     
     for subscriber in subscribers {

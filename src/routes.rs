@@ -3,6 +3,7 @@ mod subscriptions;
 mod prelude;
 mod subscriptions_confirm;
 mod newsletter;
+mod auth;
 
 pub use health_check::route::health_check;
 pub use subscriptions::route::subscribe;
