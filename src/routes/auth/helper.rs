@@ -1,15 +1,25 @@
-use secrecy::ExposeSecret;
-use sqlx::{PgPool};
+use argon2::{Algorithm, Argon2, Version, Params};
 use anyhow::Context;
+use secrecy::ExposeSecret;
+// use sha3::Digest;
+use sqlx::{PgPool};
+
 use crate::helpers::authentication::Credentials;
 use crate::errors::publish_error::PublishError;
-use sha3::Digest;
 
 pub async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool
 ) -> Result<uuid::Uuid, PublishError> {
-    let hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
+    // let hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
+    let hash = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(15000, 2,1, None)
+            .context("Failed to build Argon2 parameters")
+            .map_err(PublishError::UnexpectedError)?,
+    );
+    
     let hash = format!("{:x}", hash);
     let user_id: Option<_> = sqlx::query!(
         r#"
@@ -30,3 +40,5 @@ pub async fn validate_credentials(
         .ok_or_else(|| anyhow::anyhow!("Invalid username or password."))
         .map_err(PublishError::AuthError)
 }
+
+
