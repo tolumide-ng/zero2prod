@@ -6,9 +6,8 @@ use pbkdf2::Pbkdf2;
 use secrecy::ExposeSecret;
 use sqlx::PgPool;
 
-// use crate::helpers::auth::Credentials;
-use crate::errors::publish_error::PublishError;
 use crate::telemetry::spawn_blocking_with_tracing;
+use crate::errors::auth_error::AuthError;
 
 
 const DUMMY_PASSWORD: &str = "$pbkdf2-sha512$i=10000$O484sW7giRw+nt5WVnp15w$jEUMVZ9adB+63ko/8Dr9oB1jWdndpVVQ65xRlT+tA1GTKcJ7BWlTjdaiILzZAhIPEtgTImKvbgnu8TS/ZrjKgA";
@@ -60,7 +59,7 @@ pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::
 pub async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool
-) -> Result<uuid::Uuid, PublishError> {
+) -> Result<uuid::Uuid, AuthError> {
 
     let mut user_id = None;
     let mut expected_password_hash = Secret::new(
@@ -79,9 +78,10 @@ pub async fn validate_credentials(
     })
     .await
     .context("Failed to spawn blocking task")
-    .map_err(PublishError::UnexpectedError)??;
+    .map_err(AuthError::UnexpectedError)??;
 
-    user_id.ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username.")))
+    user_id.ok_or_else(|| anyhow::anyhow!("Unknown username"))
+        .map_err(AuthError::InvalidCredentials)
     
 }
 
@@ -112,12 +112,12 @@ async fn get_stored_credentials(
 fn verify_password_hash(
     expected_password_hash: Secret<String>,
     password_candidate: Secret<String>
-) -> Result<(), PublishError> {
+) -> Result<(), AuthError> {
     let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
         .context("Failed to parse hash in PHC string format.")
-        .map_err(PublishError::UnexpectedError)?;
+        .map_err(AuthError::UnexpectedError)?;
 
     Pbkdf2.verify_password(password_candidate.expose_secret().as_bytes(), &expected_password_hash)
         .context("Invalid password")
-        .map_err(PublishError::AuthError)
+        .map_err(AuthError::InvalidCredentials)
 }

@@ -3,6 +3,7 @@ use anyhow::Context;
 use sqlx::PgPool;
 use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
+use crate::errors::auth_error::AuthError;
 use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
 use crate::errors::publish_error::PublishError;
 use crate::helpers::auth::{basic_authentication, validate_credentials};
@@ -53,7 +54,12 @@ pub async fn publish_newsletter(
             "username", 
             &tracing::field::display(&credentials.username));
             
-        let user_id = validate_credentials(credentials, &pool).await?;
+        let user_id = validate_credentials(credentials, &pool).await
+            .map_err(|e| match e {
+                AuthError::InvalidCredentials(_) => PublishError::AuthError(e.into()),
+                AuthError::UnexpectedError(_) => PublishError::UnexpectedError(e.into())
+            })?;
+
         tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
         let subscribers = get_confirmed_subscribers(&pool).await?;
 
