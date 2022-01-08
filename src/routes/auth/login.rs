@@ -1,5 +1,13 @@
-use actix_web::HttpResponse;
-use actix_web::http::header::ContentType;
+use actix_web::{HttpResponse, web};
+use actix_web::http::header::{ContentType, LOCATION};
+use secrecy::Secret;
+
+
+#[derive(serde::Deserialize)]
+pub struct FormData {
+    username: String,
+    // password: Secret<String>
+}
 
 pub async fn login_form() -> HttpResponse {
     HttpResponse::Ok()
@@ -9,6 +17,8 @@ pub async fn login_form() -> HttpResponse {
 
 
 
-pub async fn login() -> HttpResponse {
-    HttpResponse::Ok().finish()
+pub async fn login(_from: web::Form<FormData>) -> HttpResponse {
+    HttpResponse::SeeOther()
+        .insert_header((LOCATION, "/"))
+        .finish()
 }

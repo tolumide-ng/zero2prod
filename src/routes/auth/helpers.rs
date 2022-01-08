@@ -24,15 +24,12 @@ pub async fn validate_credentials(
     DUMMY_PASSWORD.to_string()
     );
 
-    // if let Some(stored_user_id, stored_passwprd_hash) = get_stored_credentials(username: &str, pool: &PgPool)
-
-        if let Some((stored_user_id, stored_password_hash)) =
-            get_stored_credentials(&credentials.username, pool).await?
-        {
-            user_id = Some(stored_user_id);
-            expected_password_hash = stored_password_hash;
-        }
-
+    if let Some((stored_user_id, stored_password_hash)) =
+        get_stored_credentials(&credentials.username, pool).await?
+    {
+        user_id = Some(stored_user_id);
+        expected_password_hash = stored_password_hash;
+    }
 
     spawn_blocking_with_tracing(move || {
         verify_password_hash(expected_password_hash, credentials.password)
