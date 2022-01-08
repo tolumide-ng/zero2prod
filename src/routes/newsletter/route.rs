@@ -6,7 +6,7 @@ use crate::email::email_client::EmailClient;
 use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
 use crate::errors::publish_error::PublishError;
 use crate::helpers::authentication::{basic_authentication};
-use crate::routes::auth::validate_credentials;
+use crate::routes::auth::helpers::validate_credentials;
 
 
 #[tracing::instrument(
