@@ -7,6 +7,7 @@ use secrecy::Secret;
 
 use crate::helpers::authentication::Credentials;
 use crate::errors::publish_error::PublishError;
+use crate::telemetry::spawn_blocking_with_tracing;
 
 
 #[tracing::instrument(name = "Validate credentials", skip(credentials, pool))]
@@ -20,17 +21,16 @@ pub async fn validate_credentials(
         .map_err(PublishError::UnexpectedError)?
         .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username.")))?;
 
-    let current_span = tracing::Span::current();
     tokio::task::spawn_blocking(move || {
-        current_span.in_scope(|| {
+        spawn_blocking_with_tracing(|| {
             verify_password_hash(expected_password_hash, credentials.password)
         })
     })
         .await
         .context("Failed to spawn blocking task")
-        .map_err(PublishError::UnexpectedError)?
-        .context("Invalida password")
-        .map_err(PublishError::AuthError)?;
+        .map_err(PublishError::UnexpectedError)?;
+        // .context("Invalida password")
+        // .map_err(PublishError::AuthError)?;
 
 
 

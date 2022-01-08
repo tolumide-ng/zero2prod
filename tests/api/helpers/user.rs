@@ -8,7 +8,7 @@ use sqlx::PgPool;
 use zero2prod::errors::publish_error::PublishError;
 
 pub struct TestUser {
-    pub user_id: Option<Uuid>,
+    user_id: Option<Uuid>,
     pub username: String,
     pub password: String,
 }
