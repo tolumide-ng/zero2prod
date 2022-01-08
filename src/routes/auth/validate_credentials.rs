@@ -7,6 +7,8 @@ use sqlx::{PgPool};
 use crate::helpers::authentication::Credentials;
 use crate::errors::publish_error::PublishError;
 
+
+#[tracing::instrument(name = "Validate credentials", skip(credentials, pool))]
 pub async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool
@@ -16,6 +18,11 @@ pub async fn validate_credentials(
     // let phc_hash = Pbkdf2.hash_password(&[39], &salt).unwrap().to_string();
     // let parsed_hash = PasswordHash::new(&phc_hash)
     //     .context("Failed to parse the error").map_err(PublishError::UnexpectedError)?;
+
+    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, &pool)
+        .await
+        .map_err(PublishError::UnexpectedError)
+        .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username.")))?;
 
     let row: Option<_> = sqlx::query!(
         r#"
