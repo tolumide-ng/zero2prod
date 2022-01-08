@@ -34,7 +34,7 @@ impl TestUser {
             .context("Error parsing hash")
             .map_err(PublishError::UnexpectedError).unwrap().to_string();
 
-        let user = sqlx::query!(
+        let user = sqlx::query! (
             "INSERT INTO users (username, hash)
             VALUES ($1, $2) RETURNING user_id",
             self.username,
