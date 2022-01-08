@@ -39,6 +39,7 @@ anyhow = "1"
 secrecy = "0.8.0"
 base64 = "0.13"
 pbkdf2 = { version = "0.10.0", features= ["std"] }
+rand_core = { version = "0.6", features = ["std"] }
 [dependencies.sqlx]
 version = "0.5.9"
 default-features = false

@@ -2852,6 +2852,7 @@ dependencies = [
  "quickcheck",
  "quickcheck_macros",
  "rand 0.8.4",
+ "rand_core 0.6.3",
  "reqwest",
  "secrecy",
  "serde 1.0.127",

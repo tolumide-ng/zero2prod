@@ -1,8 +1,8 @@
-use argon2::{Algorithm, Argon2, Version, Params};
 use anyhow::Context;
+use pbkdf2::password_hash::{PasswordVerifier, PasswordHash};
+use pbkdf2::Pbkdf2;
 use secrecy::ExposeSecret;
 use sqlx::{PgPool};
-use argon2::PasswordHasher;
 
 use crate::helpers::authentication::Credentials;
 use crate::errors::publish_error::PublishError;
@@ -11,18 +11,15 @@ pub async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool
 ) -> Result<uuid::Uuid, PublishError> {
-    // let hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
-    let hasher = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(15000, 2,1, None)
-            .context("Failed to build Argon2 parameters")
-            .map_err(PublishError::UnexpectedError)?,
-    );
+
+    // let salt = SaltString::generate(&mut OsRng);
+    // let phc_hash = Pbkdf2.hash_password(&[39], &salt).unwrap().to_string();
+    // let parsed_hash = PasswordHash::new(&phc_hash)
+    //     .context("Failed to parse the error").map_err(PublishError::UnexpectedError)?;
 
     let row: Option<_> = sqlx::query!(
         r#"
-        SELECT user_id, hash, salt
+        SELECT user_id, hash
         FROM users
         WHERE username = $1
         "#,
@@ -33,25 +30,23 @@ pub async fn validate_credentials(
     .context("Failed to perform a query to retrieve stored credentials.")
     .map_err(PublishError::UnexpectedError)?;
 
-    let (expected_password_hash, user_id, salt) = match row {
-        Some(row) => (row.hash, row.id, row.salt),
+    let (expected_password_hash, user_id) = match row {
+        Some(row) => (row.hash, row.user_id),
         None => {
             return Err(PublishError::AuthError(anyhow::anyhow!("Unknown username")))
         }
     };
 
-    let hash = hasher
-        .hash_password(credentials.password.expose_secret().as_bytes(), &salt)
-        .context("Failed to hash password")
+    let expected_password_hash = PasswordHash::new(&expected_password_hash)
+        .context("Failed to parse hash in PHC string format.")
         .map_err(PublishError::UnexpectedError)?;
 
-    let hash = format!(":x", hash.hash.unwrap());
 
-    if hash != expected_password_hash {
-        Err(PublishError::AuthError(anyhow::anyhow!("Invalid password.")))
-    } else {
-        Ok(user_id)
-    }
+    Pbkdf2.verify_password(credentials.password.expose_secret().as_bytes(), &expected_password_hash)
+        .context("Invalid Password")
+        .map_err(PublishError::AuthError)?;
+
+    Ok(user_id)
 }
 
 
