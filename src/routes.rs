@@ -12,3 +12,4 @@ pub use subscriptions_confirm::route::confirm;
 pub use newsletter::route::publish_newsletter;
 pub use pages::home::home;
 pub use auth::login::login_form;
+pub use auth::login::login;
