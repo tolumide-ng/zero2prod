@@ -5,7 +5,7 @@ use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use secrecy::Secret;
 
-use crate::helpers::authentication::Credentials;
+use crate::helpers::auth::Credentials;
 use crate::errors::publish_error::PublishError;
 use crate::telemetry::spawn_blocking_with_tracing;
 
