@@ -40,6 +40,8 @@ rand_core = { version = "0.6", features = ["std"] }
 urlencoding = "2"
 htmlescape = "0.3"
 time = "0.3"
+actix-http = "=3.0.0-beta.8"
+actix-rt = "2.2.0"
 actix-web-flash-messages = { version = "=0.3.0", features = ["cookies"] }
 [dependencies.sqlx]
 version = "0.5.9"
