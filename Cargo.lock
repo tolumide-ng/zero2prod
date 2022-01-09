@@ -3126,7 +3126,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
- "time 0.2.27",
+ "time 0.3.5",
  "tokio",
  "tracing",
  "tracing-actix-web",
