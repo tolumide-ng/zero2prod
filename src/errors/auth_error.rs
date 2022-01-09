@@ -1,6 +1,4 @@
-use actix_http::{StatusCode, header::LOCATION};
 use actix_web::{ResponseError, HttpResponse};
-use hmac::{Hmac, Mac, NewMac};
 
 use super::helper::error_chain_fmt;
 
@@ -28,26 +26,3 @@ impl std::fmt::Debug for LoginError {
 
 }
 
-impl ResponseError for LoginError {
-    fn error_response(&self) -> HttpResponse {
-        let query_string = format!("error={}", urlencoding::Encoded::new(self.to_string()));
-        let secret: &[u8] = todo!();
-        let hmac_tag = {
-            let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret).unwrap();
-            mac.update(query_string.as_bytes());
-            mac.finalize().into_bytes()
-        };
-    
-        HttpResponse::build(self.status_code())
-            .insert_header((LOCATION, format!("/login?{}&tag={:x}", query_string, hmac_tag)))
-            .finish()
-    }
-
-
-    fn status_code(&self) -> StatusCode {
-        match self {
-            LoginError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            LoginError::AuthError(_) => StatusCode::UNAUTHORIZED,
-        }
-    }
-}
