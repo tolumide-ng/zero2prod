@@ -7,6 +7,7 @@ use actix_web_flash_messages::{
     storage::CookieMessageStore,
 };
 use actix_session::SessionMiddleware;
+use actix_session::storage::RedisSessionStore;
 use secrecy::{ExposeSecret, Secret};
 use std::net::TcpListener;
 use sqlx::{PgPool};
@@ -22,7 +23,8 @@ pub fn run(
     db_pool: PgPool, 
     email_client: EmailClient,
     base_url: String,
-    hmac_secret: Secret<String>
+    hmac_secret: Secret<String>,
+    redis_uri: Secret<String>,
 ) -> Result<Server, std::io::Error> {
 
     let db_pool = web::Data::new(db_pool);
@@ -33,13 +35,14 @@ pub fn run(
     let message_store = CookieMessageStore::builder(
         Key::from(secret_key)
     ).build();
-    
     let message_framework = FlashMessagesFramework::builder(message_store).build();
+
+    let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await?;
 
     let server = HttpServer::new( move || {
         App::new()
         .wrap(message_framework.clone())
-        .wrap(SessionMiddleware::new(todo!(), secret_key.clone()))
+        .wrap(SessionMiddleware::new(redis_store.clone(), secret_key.clone()))
         .wrap(TracingLogger::default())
             .wrap(message_framework.clone())
             .route("/health_check", web::get().to(health_check))

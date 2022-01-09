@@ -15,7 +15,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(configuration: Settings) -> Result<Self, anyhow::Error> {
     
         let connection_pool = get_connection_pool(&configuration.database);   
     
@@ -39,7 +39,9 @@ impl Application {
             connection_pool, 
             email_client, 
             configuration.application.base_url,
-            configuration.application.hmac_secret)?;
+            configuration.application.hmac_secret, 
+            configuration.application.redis_uri
+        ).await?;
         Ok(Self {port, server})
     }
 
