@@ -30,7 +30,7 @@ pub async fn login_form(
         .content_type(ContentType::html())
         .cookie(
             Cookie::build("_flash", "")
-                .max_age(0)
+                .max_age(time::Duration::zero())
                 .finish()
         )
         .body(format!(
