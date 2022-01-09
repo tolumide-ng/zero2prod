@@ -39,7 +39,7 @@ pbkdf2 = { version = "0.10.0", features= ["std"] }
 rand_core = { version = "0.6", features = ["std"] }
 urlencoding = "2"
 htmlescape = "0.3"
-time = "0.2"
+time = "0.2.27"
 actix-web-flash-messages = { version = "=0.2.7", features = ["cookies"] }
 [dependencies.sqlx]
 version = "0.5.9"
