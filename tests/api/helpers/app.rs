@@ -82,7 +82,7 @@ impl TestApp {
     }
 
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
-    where Body: serde::Deserialize,
+        where Body: serde::Deserialize,
     {
         reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -92,6 +92,14 @@ impl TestApp {
             .form(body)
             .send()
             .await.expect("Failed to execute request.")
+    }
+
+    pub async fn get_login(&self) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(&format!("{}/login", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
     }
 }
 
