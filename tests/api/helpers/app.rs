@@ -31,11 +31,12 @@ pub struct TestApp {
     pub email_server: MockServer,
     pub port: u16,
     pub test_user: TestUser,
+    pub api_client: reqwest::Client
 }
 
 impl TestApp {
     pub async fn post_subscription(&self, body: String) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client()
             .post(&format!("{}/subscriptions", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
@@ -72,7 +73,7 @@ impl TestApp {
         // destructure username and password of the test_user
         let TestUser {username, password, ..} = &self.test_user;
 
-        reqwest::Client::new()
+        self.api_client()
             .post(&format!("{}/newsletters", &self.address))
             .basic_auth(username, Some(password))
             .json(&body)
@@ -84,7 +85,7 @@ impl TestApp {
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
         where Body: serde::Deserialize,
     {
-        reqwest::Client::builder()
+        self.api_client()
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap()
@@ -95,7 +96,7 @@ impl TestApp {
     }
 
     pub async fn get_login(&self) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client()
             .get(&format!("{}/login", &self.address))
             .send()
             .await
@@ -136,12 +137,19 @@ pub async fn spawn_app() -> TestApp {
     let mut test_user = TestUser::generate();
     test_user.store(&db_pool);
 
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
     let test_app = TestApp {
         address,
         db_pool,
         email_server,
         port: application_port,
-        test_user
+        test_user,
+        api_client: client,
     };
 
     test_app
