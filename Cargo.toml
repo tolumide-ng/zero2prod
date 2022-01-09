@@ -42,6 +42,8 @@ htmlescape = "0.3"
 time = "0.3"
 actix-rt = "2.2.0"
 actix-web-flash-messages = { version = "=0.3.0", features = ["cookies"] }
+actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }
+
 [dependencies.sqlx]
 version = "0.5.9"
 default-features = false
@@ -59,7 +61,7 @@ version = "0.11"
 default-features = false
 features = ["json", "rustls-tls", "cookies"]
 [dependencies.actix-session]
-git = "https://github.com/LukeMathWalker/actix-extras"
+git = "https://github.com/LukeMathWalker/actix-extras/tree/rework-actix-session"
 branch = "rework-actix-session"
 features = ["redis-rs-tls-session"]
 [dev-dependencies]
