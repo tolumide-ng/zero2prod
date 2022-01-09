@@ -58,6 +58,7 @@ features = [
 version = "0.11"
 default-features = false
 features = ["json", "rustls-tls", "cookies"]
+actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }
 
 [dev-dependencies]
 tokio = "1"

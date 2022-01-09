@@ -6,6 +6,7 @@ use actix_web_flash_messages::{
     FlashMessagesFramework,
     storage::CookieMessageStore,
 };
+use actix_session::SessionMiddleware;
 use secrecy::{ExposeSecret, Secret};
 use std::net::TcpListener;
 use sqlx::{PgPool};
@@ -32,12 +33,12 @@ pub fn run(
         Key::from(hmac_secret.expose_secret().as_bytes())
     ).build();
     
-    // let message_framework = FlashMessagesFramework::builder(todo!()).build();
+    let message_framework = FlashMessagesFramework::builder(message_store).build();
 
     let server = HttpServer::new( move || {
         App::new()
         .wrap(TracingLogger::default())
-            // .wrap(message_framework.clone())
+            .wrap(message_framework.clone())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
