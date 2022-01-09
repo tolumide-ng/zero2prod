@@ -2,10 +2,9 @@ use actix_web::cookie::Cookie;
 use actix_web::error::InternalError;
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
-use secrecy::{Secret, ExposeSecret};
+use secrecy::{Secret};
 use sqlx::PgPool;
 
-use crate::configuration::application_settings::HmacSecret;
 use crate::errors::auth_error::{AuthError, LoginError};
 use crate::helpers::auth::{Credentials, validate_credentials};
 
@@ -29,6 +28,11 @@ pub async fn login_form(
 
     HttpResponse::Ok()
         .content_type(ContentType::html())
+        .cookie(
+            Cookie::build("_flash", "")
+                .max_age(time::Duration::zero())
+                .finish()
+        )
         .body(format!(
             r#"
             <!DOCTYPE html>
