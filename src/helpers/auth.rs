@@ -63,7 +63,7 @@ pub async fn validate_credentials(
 
     let mut user_id = None;
     let mut expected_password_hash = Secret::new(
-    DUMMY_PASSWORD.to_string()
+        DUMMY_PASSWORD.to_string()
     );
 
     if let Some((stored_user_id, stored_password_hash)) =
