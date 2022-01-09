@@ -19,7 +19,7 @@ serde = "1.0.127"
 config = "0.11.0"
 uuid = { version = "0.8.1", features = ["v4", "serde"] }
 chrono = "0.4.15"
-tracing = { version = "0.1.26", features = ["log"] }
+tracing = { version = "=0.1.26", features = ["log"] }
 tracing-subscriber = { version = "0.2.20", features = ["registry", "env-filter"] }
 tracing-futures = "0.2.5"
 tracing-bunyan-formatter = "0.2.4"
@@ -42,7 +42,7 @@ htmlescape = "0.3"
 time = "0.3"
 actix-rt = "2.2.0"
 actix-web-flash-messages = { version = "=0.3.0", features = ["cookies"] }
-actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }
+actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", features = ["redis-rs-tls-session"] }
 
 [dependencies.sqlx]
 version = "0.5.9"
@@ -60,10 +60,6 @@ features = [
 version = "0.11"
 default-features = false
 features = ["json", "rustls-tls", "cookies"]
-[dependencies.actix-session]
-git = "https://github.com/LukeMathWalker/actix-extras/tree/rework-actix-session"
-branch = "rework-actix-session"
-features = ["redis-rs-tls-session"]
 [dev-dependencies]
 tokio = "1"
 once_cell = "1.8.0"
