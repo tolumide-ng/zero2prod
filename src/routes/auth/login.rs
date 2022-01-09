@@ -1,3 +1,4 @@
+use actix_web::cookie::Cookie;
 use actix_web::error::InternalError;
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
@@ -96,7 +97,7 @@ pub async fn login_form(
 pub async fn login(
     form: web::Form<FormData>, 
     pool: web::Data<PgPool>,
-) -> Result<HttpResponse, LoginError> {
+) -> Result<HttpResponse, InternalError<LoginError>> {
 
     let credentials = Credentials {
         username: form.0.username,
@@ -120,12 +121,15 @@ pub async fn login(
             };
 
             let response = HttpResponse::SeeOther()
-                .insert_header((LOCATION, "/login")).finish();
+                .insert_header((LOCATION, "/login"))
+                // .insert_header(("Set-Cookie", format!("_flash={}", e)))
+                .cookie(Cookie::new("_flash", e.to_string()))
+                .finish();
 
             return Err(InternalError::from_response(e, response))
-        })?;
+        });
 
-    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id.unwrap()));
 
     Ok(HttpResponse::SeeOther()
     .insert_header((LOCATION, "/"))
