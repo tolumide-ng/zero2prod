@@ -2,7 +2,9 @@ use actix_web::cookie::Cookie;
 use actix_web::error::InternalError;
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
+use actix_web_flash_messages::{FlashMessage, IncomingFlashMessages, Level};
 use secrecy::{Secret};
+use std::fmt::Write;
 use sqlx::PgPool;
 
 use crate::errors::auth_error::{AuthError, LoginError};
@@ -17,15 +19,13 @@ pub struct FormData {
 
 
 pub async fn login_form(
-    request: web::HttpRequest
+    flash_messages: IncomingFlashMessages
 ) -> HttpResponse {
-    let error_html = match request.cookie("_flash")  {
-        None => "".into(),
-        Some(cookie) => {
-            format!("<p><i>{}</i></p>", htmlescape::encode_minimal(cookie.value()))
-        } 
-    };
-
+    let mut error_html = String::new();
+    for m in flash_messages.iter().filter(|m| m.level() == Level::Error) {
+        writeln!(error_html, "<p><i>{}</i></p>", m.content()).unwrap();
+    }
+    
     HttpResponse::Ok()
         .content_type(ContentType::html())
         .cookie(
@@ -84,21 +84,16 @@ pub async fn login(
     let user_id = validate_credentials(credentials, &pool).await
         .map_err(|e| {
             let query_string = format!("error={}", urlencoding::Encoded::new(e.to_string()));
-            let hmac_tag = {
-                let mut mac = HmacSha256::new_from_slice(secret.expose_secret()).as_bytes().unwrap();;
-                mac.update(query_string.as_bytes());
-                mac.finalize().into_bytes()
-            };
-
             let e =  match e {
                 AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
 
+            FlashMessage::error(e.to_string()).send();
+
             let response = HttpResponse::SeeOther()
+                // .cookie(Cookie::new("_flash", e.to_string()))
                 .insert_header((LOCATION, "/login"))
-                // .insert_header(("Set-Cookie", format!("_flash={}", e)))
-                .cookie(Cookie::new("_flash", e.to_string()))
                 .finish();
 
             return Err(InternalError::from_response(e, response))
