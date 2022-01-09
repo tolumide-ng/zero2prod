@@ -1,10 +1,9 @@
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
 use secrecy::Secret;
-use serde::Deserialize;
 use sqlx::PgPool;
 
-
+use crate::errors::auth_error::{AuthError, LoginError};
 use crate::helpers::auth::{Credentials, validate_credentials};
 
 
@@ -26,7 +25,7 @@ pub async fn login_form() -> HttpResponse {
     skip(form, pool),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
-pub async fn login(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn login(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Result<HttpResponse, LoginError> {
     let credentials = Credentials {
         username: form.0.username,
         password: form.0.password,
@@ -34,15 +33,15 @@ pub async fn login(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpRe
     tracing::Span::current()
         .record("username", &tracing::field::display(&credentials.username));
 
-    match validate_credentials(credentials, &pool).await {
-        Ok(user_id) => {
-            tracing::Span::current().record("user_id", &traicng::field::display(&user_id));
-            HttpResponse::SeeOther()
-                .insert_header((LOCATION, "/"))
-                .finish()
-        }
-        Err(_) => {
-            todo!()
-        }
-    }
+    let user_id = validate_credentials(credentials, &pool).await
+        .map_err(|e| match e {
+            AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
+            AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+        })?;
+
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
+
+    Ok(HttpResponse::SeeOther()
+    .insert_header((LOCATION, "/"))
+    .finish())
 }
