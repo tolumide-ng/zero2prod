@@ -1,6 +1,8 @@
+use crate::configuration::application_settings::HmacSecret;
 use crate::routes::{health_check, subscribe, confirm, publish_newsletter, home, login_form, login};
 use actix_web::{App, HttpServer, web};
 use actix_web::dev::Server;
+use secrecy::Secret;
 use std::net::TcpListener;
 use sqlx::{PgPool};
 use tracing_actix_web::TracingLogger;
@@ -13,6 +15,7 @@ pub fn run(
     db_pool: PgPool, 
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: Secret<String>
 ) -> Result<Server, std::io::Error> {
 
     let db_pool = web::Data::new(db_pool);
@@ -32,6 +35,7 @@ pub fn run(
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
+            .app_data(web::Data::new(hmac_secret.clone()))
     }).listen(listner)?
     .run();
     Ok(server)

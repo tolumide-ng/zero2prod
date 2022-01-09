@@ -1,6 +1,9 @@
+use actix_web::error::InternalError;
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
+use hmac::{Hmac, Mac, NewMac};
 use secrecy::Secret;
+use sha2::Sha256;
 use sqlx::PgPool;
 
 use crate::errors::auth_error::{AuthError, LoginError};
@@ -18,11 +21,13 @@ pub struct QueryParams {
     error: Option<String>,
 }
 
+type HmacSha256 = Hmac<Sha256>;
+
 
 pub async fn login_form(query: web::Query<QueryParams>) -> HttpResponse {
     let error_html = match query.0.error {
         None => "".into(),
-        Some(e) => format!("<p><i>{}</i></p>", e)
+        Some(e) => format!("<p><i>{}</i></p>", htmlescape::encode_minimal(&e))
     };
 
     HttpResponse::Ok()
@@ -63,7 +68,11 @@ pub async fn login_form(query: web::Query<QueryParams>) -> HttpResponse {
     skip(form, pool),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
-pub async fn login(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Result<HttpResponse, LoginError> {
+pub async fn login(
+    form: web::Form<FormData>, 
+    pool: web::Data<PgPool>,
+) -> Result<HttpResponse, LoginError> {
+
     let credentials = Credentials {
         username: form.0.username,
         password: form.0.password,
@@ -72,9 +81,25 @@ pub async fn login(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Result
         .record("username", &tracing::field::display(&credentials.username));
 
     let user_id = validate_credentials(credentials, &pool).await
-        .map_err(|e| match e {
-            AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
-            AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+        .map_err(|e| {
+            let query_string = format!("error={}", urlencoding::Encoded::new(e.to_string()));
+            let hmac_tag = {
+                let mut mac = HmacSha256::new_from_slice(secret.expose_secret()).as_bytes().unwrap();;
+                mac.update(query_string.as_bytes());
+                mac.finalize().into_bytes()
+            };
+
+            let e =  match e {
+                AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
+                AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
+            };
+
+            let response = HttpResponse::SeeOther()
+                .insert_header((
+                    LOCATION, format!("/login?{}&tag={:x}", query_string, hmac_tag)
+                )).finish();
+
+            return Err(InternalError::from_response(e, response))
         })?;
 
     tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
