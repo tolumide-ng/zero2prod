@@ -13,11 +13,49 @@ pub struct FormData {
     pub password: Secret<String>
 }
 
+#[derive(serde::Deserialize)]
+pub struct QueryParams {
+    error: Option<String>,
+}
 
-pub async fn login_form() -> HttpResponse {
+
+pub async fn login_form(query: web::Query<QueryParams>) -> HttpResponse {
+    let error_html = match query.0.error {
+        None => "".into(),
+        Some(e) => format!("<p><i>{}</i></p>", e)
+    };
+
     HttpResponse::Ok()
         .content_type(ContentType::html())
-        .body(include_str!("../pages/login.html"))
+        .body(format!(
+            r#"
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8" http-equiv="content-type" content="text/html">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Login</title>
+            </head>
+            <body>
+                {}
+                <form action="/login" method="post">
+                    <label>
+                        Username
+                        <input type="text" placeholder="Enter Username" aria-placeholder="Username" name="username">
+                    </label>
+
+                    <label>
+                        Password
+                        <input type="password" name="password" placeholder="Enter Password" aria-placeholder="password">
+                    </label>
+
+                    <button type="submit">Login</button>
+                </form>
+            </body>
+            </html>
+            "#, error_html
+        ))
 }
 
 
