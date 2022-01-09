@@ -2,10 +2,11 @@ use actix_web::error::InternalError;
 use actix_web::{HttpResponse, web};
 use actix_web::http::header::{ContentType, LOCATION};
 use hmac::{Hmac, Mac, NewMac};
-use secrecy::Secret;
+use secrecy::{Secret, ExposeSecret};
 use sha2::Sha256;
 use sqlx::PgPool;
 
+use crate::configuration::application_settings::HmacSecret;
 use crate::errors::auth_error::{AuthError, LoginError};
 use crate::helpers::auth::{Credentials, validate_credentials};
 
@@ -19,15 +20,39 @@ pub struct FormData {
 #[derive(serde::Deserialize)]
 pub struct QueryParams {
     error: Option<String>,
+    tag: Option<String>,
+}
+
+impl QueryParams {
+    fn verify(self, secret: &HmacSecret) -> Result<String, anyhow::Error> {
+        let tag = hex::decode(self.tag.unwrap())?;
+        let query_string = format!("error={}", urlencoding::Encoded::new(&self.error.unwrap()));
+        let mut mac = HmacSha256::new_from_slice(secret.0.expose_secret().as_bytes());
+        mac.verify(&tag)?;
+
+        Ok(self.error.unwrap())
+    }
 }
 
 type HmacSha256 = Hmac<Sha256>;
 
 
-pub async fn login_form(query: web::Query<QueryParams>) -> HttpResponse {
-    let error_html = match query.0.error {
+pub async fn login_form(
+    query: web::Query<Option<QueryParams>>,
+    secret: web::Data<HmacSecret>,
+) -> HttpResponse {
+    let error_html = match query.0 {
         None => "".into(),
-        Some(e) => format!("<p><i>{}</i></p>", htmlescape::encode_minimal(&e))
+        Some(query) => match query.verify(&secret) {
+            Ok(error) => {
+                format!("<p><i>{}</i></p>", htmlescape::encode_minimal(&error))
+            }
+            Err(e) => {
+                tracing::warn!(error.message = %e, error.cause_chain = ?e, 
+                "Failed to veridy query parameters using the HMAC tag")
+                "".into()
+            }
+        } 
     };
 
     HttpResponse::Ok()
