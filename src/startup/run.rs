@@ -28,15 +28,18 @@ pub fn run(
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
+    let secret_key = hmac_secret.expose_secret().as_bytes();
 
     let message_store = CookieMessageStore::builder(
-        Key::from(hmac_secret.expose_secret().as_bytes())
+        Key::from(secret_key)
     ).build();
     
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
     let server = HttpServer::new( move || {
         App::new()
+        .wrap(message_framework.clone())
+        .wrap(SessionMiddleware::new(todo!(), secret_key.clone()))
         .wrap(TracingLogger::default())
             .wrap(message_framework.clone())
             .route("/health_check", web::get().to(health_check))
@@ -49,7 +52,6 @@ pub fn run(
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
-            .app_data(web::Data::new(hmac_secret.clone()))
     }).listen(listner)?
     .run();
     Ok(server)
