@@ -18,5 +18,9 @@ async fn an_error_flash_message_is_set_on_failure() {
 
     assert_eq!(response.status().as_u16(), 303);
     assert_eq!(response.headers().get("Location").unwrap(), "/login");
+
+    let response = app.get_login().await;
+    let html_page = response.text().await.unwrap();
+    assert!(html_page.contains(r#"<p><i>Authentication failed</i></p>"#));
 }
 
