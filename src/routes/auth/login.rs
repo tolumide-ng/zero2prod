@@ -120,9 +120,7 @@ pub async fn login(
             };
 
             let response = HttpResponse::SeeOther()
-                .insert_header((
-                    LOCATION, format!("/login?{}&tag={:x}", query_string, hmac_tag)
-                )).finish();
+                .insert_header((LOCATION, "/login")).finish();
 
             return Err(InternalError::from_response(e, response))
         })?;
