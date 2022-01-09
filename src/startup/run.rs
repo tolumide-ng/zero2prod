@@ -1,12 +1,14 @@
-use crate::configuration::application_settings::HmacSecret;
-use crate::routes::{health_check, subscribe, confirm, publish_newsletter, home, login_form, login};
 use actix_web::{App, HttpServer, web};
 use actix_web::dev::Server;
+use actix_web_flash_messages::FlashMessagesFramework;
 use secrecy::Secret;
 use std::net::TcpListener;
 use sqlx::{PgPool};
 use tracing_actix_web::TracingLogger;
+
+use crate::configuration::application_settings::HmacSecret;
 use crate::email::email_client::EmailClient;
+use crate::routes::{health_check, subscribe, confirm, publish_newsletter, home, login_form, login};
 
 pub struct ApplicationBaseUrl(pub String);
 
@@ -21,6 +23,8 @@ pub fn run(
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
+
+    let mesage_framework = FlashMessageFranework::builder(todo!()).build();
 
     let server = HttpServer::new( move || {
         App::new()
