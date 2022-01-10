@@ -31,6 +31,3 @@ impl FromRequest for TypedSession {
         ready(Ok(TypedSession(req.get_session())))
     }
 }
-
-
-// actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }

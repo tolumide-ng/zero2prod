@@ -18,7 +18,7 @@ impl TestUser {
         Self {
             user_id: None,
             username: Uuid::new_v4().to_string(),
-            password: Uuid::new_v4().to_string(),
+            password: "averyhardpassword".into()
         }
     }
 
@@ -30,6 +30,9 @@ impl TestUser {
             .context("Failed to hash password").map_err(PublishError::UnexpectedError).unwrap().to_string();
 
         // let hash = format!("{:x}", hash);
+
+        dbg!(&password_hash);
+        
         let parsed_hash = PasswordHash::new(&password_hash)
             .context("Error parsing hash")
             .map_err(PublishError::UnexpectedError).unwrap().to_string();
