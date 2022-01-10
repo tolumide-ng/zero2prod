@@ -41,8 +41,9 @@ urlencoding = "2"
 htmlescape = "0.3"
 time = "0.3"
 actix-rt = "2.2.0"
-actix-web-flash-messages = { version = "=0.3.0", features = ["cookies"] }
 actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }
+actix-web-flash-messages = { version = "=0.3.0", features = ["cookies"] }
+serde_json = "1"
 
 [dependencies.sqlx]
 version = "0.5.9"
