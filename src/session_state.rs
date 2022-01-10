@@ -1,9 +1,12 @@
-use actix_session::Session;
+use actix_session::{Session, SessionExt};
 use uuid::Uuid;
+use actix_web::{dev::Payload, FromRequest, HttpRequest,};
+use std::future::{Ready, ready};
+
 
 pub struct TypedSession(Session);
 
-impl Typedsession {
+impl TypedSession {
     const USER_ID_KEY: &'static str = "user_id";
 
     pub fn renew(&self) {
@@ -18,3 +21,16 @@ impl Typedsession {
         self.0.get(Self::USER_ID_KEY)
     }
 }
+
+impl FromRequest for TypedSession {
+    type Error = <Session as FromRequest>::Error;
+
+    type Future = Ready<Result<TypedSession, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+        ready(Ok(TypedSession(req.get_session())))
+    }
+}
+
+
+// actix-session = { git = "https://github.com/LukeMathWalker/actix-extras", branch = "rework-actix-session", features = ["redis-rs-tls-session"] }

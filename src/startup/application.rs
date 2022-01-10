@@ -39,8 +39,8 @@ impl Application {
             connection_pool, 
             email_client, 
             configuration.application.base_url,
-            configuration.application.hmac_secret, 
-            configuration.application.redis_uri
+            configuration.application.hmac_secret,
+            configuration.redis_uri,
         ).await?;
         Ok(Self {port, server})
     }

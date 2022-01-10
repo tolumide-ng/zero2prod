@@ -1,6 +1,6 @@
 use actix_web::{
     cookie::Key, App, dev::Server, 
-    HttpServer, web
+    HttpServer, web,
 };
 use actix_web_flash_messages::{
     FlashMessagesFramework,
@@ -18,23 +18,21 @@ use crate::routes::{health_check, subscribe, confirm, publish_newsletter, home, 
 
 pub struct ApplicationBaseUrl(pub String);
 
-pub fn run(
+pub async fn run(
     listner: TcpListener, 
     db_pool: PgPool, 
     email_client: EmailClient,
     base_url: String,
     hmac_secret: Secret<String>,
     redis_uri: Secret<String>,
-) -> Result<Server, std::io::Error> {
+) -> Result<Server, anyhow::Error> {
 
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
-    let secret_key = hmac_secret.expose_secret().as_bytes();
+    let secret_key = Key::from(hmac_secret.expose_secret().as_bytes());
 
-    let message_store = CookieMessageStore::builder(
-        Key::from(secret_key)
-    ).build();
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
     let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await?;

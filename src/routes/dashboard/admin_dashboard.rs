@@ -1,5 +1,9 @@
+use anyhow::Context;
+use actix_web::http::header::{ContentType, LOCATION};
 use actix_web::{web, HttpResponse};
 use actix_session::Session;
+use sqlx::PgPool;
+use uuid::Uuid;
 
 fn e500<T>(e: T) -> actix_web::error::InternalError<T> {
     actix_web::error::InternalError::from_response(e, HttpResponse::InternalServerError().finish())
@@ -8,14 +12,13 @@ fn e500<T>(e: T) -> actix_web::error::InternalError<T> {
 
 pub async fn admin_dashboard(
     session: Session,
+    pool: web::Data<PgPool>
 ) -> Result<HttpResponse, actix_web::Error> {
-    let username = if let Some(user_id) = session
-    .get::<Uuid>("user_id").map_err(e500)? 
-    {
+    let username = if let Some(user_id) = session.get::<Uuid>("user_id").map_err(e500)? {
         get_username(user_id, &pool).await.map_err(e500)?;
     } else {
-        todo!()
-    }
+        return Ok(HttpResponse::SeeOther().insert_header((LOCATION, "/login")).finish());
+    };
 
     Ok(HttpResponse::Ok()
         .content_type(ContentType::html())
@@ -52,5 +55,5 @@ async fn get_username(
         .await
         .context("Failed to perfom the query to retrieve a username.")?;
 
-    Ok(row.useranme)
+    Ok(row.username)
 }

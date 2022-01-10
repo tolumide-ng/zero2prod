@@ -5,6 +5,7 @@ use crate::configuration::{
     email_settings::EmailClientSettings,
     environment::Environment,
 };
+use secrecy::Secret;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
