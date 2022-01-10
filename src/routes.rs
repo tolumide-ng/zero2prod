@@ -15,3 +15,5 @@ pub use pages::home::home;
 pub use auth::login::login_form;
 pub use auth::login::login;
 pub use dashboard::admin_dashboard::admin_dashboard;
+pub use dashboard::password::change_password;
+pub use dashboard::password::change_password_form;
