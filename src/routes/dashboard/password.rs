@@ -2,21 +2,29 @@ use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
 use actix_web::web;
 use actix_web_flash_messages::FlashMessage;
+use actix_web_flash_messages::IncomingFlashMessages;
 use secrecy::ExposeSecret;
 use secrecy::Secret;
+use std::fmt::Write;
 
 use crate::session_state::TypedSession;
 use crate::utils::{e500, see_other};
 
 
 pub async fn change_password_form(
-    session: TypedSession
+    session: TypedSession,
+    flash_messages: IncomingFlashMessages,
 ) -> Result<HttpResponse, actix_web::Error> {
     if session.get_user_id().map_err(e500)?.is_none() {
         return Ok(see_other("/login"));
     }
 
-    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
+    let mut msg_html = String::new();
+    for m in flash_messages.iter() {
+        writeln!(msg_html, "<p><i>{}</i></p>", m.content()).unwrap();
+    }
+
+    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(format!(
         r#"<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -24,6 +32,7 @@ pub async fn change_password_form(
         <title>Change Password</title>
         </head>
         <body>
+            {}
             <form action="/admin/password" method="post">
             <label>Current password
             <input
@@ -53,8 +62,8 @@ pub async fn change_password_form(
             </form>
             <p><a href="/admin/dashboard">&lt;- Back</a></p>
         </body>
-        </html>"#,
-    ))
+        </html>"#, msg_html
+    )))
 }
 
 #[derive(serde::Deserialize)]
