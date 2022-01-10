@@ -81,7 +81,7 @@ pub struct FormData {
 
 pub async fn change_password(
     form: web::Form<FormData>,
-    session: Session,
+    session: TypedSession,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, actix_web::Error> {
     if form.new_password.expose_secret() != form.new_password_check.expose_secret() {

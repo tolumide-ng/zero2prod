@@ -1,8 +1,8 @@
+redis_uri: "redis://127.0.0.1:6379"
 application:
   port: 7000
   base_url: "http://127.0.0.1"
-  hmac_secret: "a-really-long-random-secret-key-to-verify-message-integrity"
-  redis_uri: "redis://127.0.0.1:6379"
+  hmac_secret: "super-long-and-secret-random-key-needed-to-verify-message-integrity"
 database:
   host: "localhost"
   port: 5432

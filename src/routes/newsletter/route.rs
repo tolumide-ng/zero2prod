@@ -1,12 +1,20 @@
 use actix_web::{HttpResponse, web};
+use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 use sqlx::PgPool;
 use crate::domain::subscriber_email::SubscriberEmail;
 use crate::email::email_client::EmailClient;
-use crate::errors::auth_error::AuthError;
-use crate::routes::newsletter::helper::{ConfirmedSubscriber, BodyData};
-use crate::errors::publish_error::PublishError;
-use crate::helpers::auth::{basic_authentication, validate_credentials};
+use crate::routes::newsletter::helper::{ConfirmedSubscriber};
+use crate::session_state::TypedSession;
+use crate::utils::{e500, see_other};
+
+
+#[derive(serde::Deserialize)]
+pub struct FormData {
+    title: String,
+    text_content: String,
+    html_content: String,
+}
 
 
 #[tracing::instrument(
@@ -37,32 +45,23 @@ async fn get_confirmed_subscribers(pool: &PgPool) -> Result<Vec<Result<Confirmed
 
 #[tracing::instrument(
     name = "Publish a neslietter issue",
-    skip(body, pool, email_client, request),
+    skip(form, session, pool, email_client),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn publish_newsletter(
-    body: web::Json<BodyData>, 
+    form: web::Form<FormData>,
+    session: TypedSession,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
-    request: web::HttpRequest,
-) -> Result<HttpResponse, PublishError> {
-    let credentials = basic_authentication(request.headers())
-        .map_err(PublishError::AuthError)?;
+) -> Result<HttpResponse, actix_web::Error> {
+    let user_id = session.get_user_id().map_err(e500)?;
 
+    if user_id.is_none() {
+        return Ok(see_other("/login"));
+    }
         
-        tracing::Span::current().record(
-            "username", 
-            &tracing::field::display(&credentials.username));
-            
-        let user_id = validate_credentials(credentials, &pool).await
-            .map_err(|e| match e {
-                AuthError::InvalidCredentials(_) => PublishError::AuthError(e.into()),
-                AuthError::UnexpectedError(_) => PublishError::UnexpectedError(e.into())
-            })?;
-
-        tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
-        let subscribers = get_confirmed_subscribers(&pool).await?;
-
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id.unwrap()));
+    let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     
     for subscriber in subscribers {
         match subscriber {
@@ -70,27 +69,26 @@ pub async fn publish_newsletter(
                 email_client
                     .send_email(
                     &subscriber.email,
-                    &body.title,
-                    &body.content.html,
-                    &body.content.text
+                    &form.title,
+                    &form.html_content,
+                    &form.text_content,
                 )
                 .await
                 .with_context(|| {
-                        format!(
-                            "Failed to sned newsletter issue to {}", subscriber.email
-                        )
-                    })?;
+                        format!("Failed to sned newsletter issue to {}", subscriber.email)
+                    }).map_err(e500)?;
 
             }
             Err(error) => {
                 tracing::warn!(
                     error.cause_chain = ?error,
-                    "Skipping a confirmed subscriber. \
-                    Their stored contact details are invalid",
-                )
+                    error.message = %error,
+                    "Skipping a confirmed subscriber. Their stored contact details are invalid",
+                );
 
             }
         }
     }
+    FlashMessage::info("The newsletter issues has been published!").send();
     Ok(HttpResponse::Ok().finish())
 }

@@ -36,7 +36,7 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn post_subscription(&self, body: String) -> reqwest::Response {
-        self.api_client()
+        self.api_client
             .post(&format!("{}/subscriptions", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
@@ -73,7 +73,7 @@ impl TestApp {
         // destructure username and password of the test_user
         let TestUser {username, password, ..} = &self.test_user;
 
-        self.api_client()
+        self.api_client
             .post(&format!("{}/newsletters", &self.address))
             .basic_auth(username, Some(password))
             .json(&body)
@@ -83,12 +83,9 @@ impl TestApp {
     }
 
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
-        where Body: serde::Deserialize,
+        where Body: serde::Serialize,
     {
-        self.api_client()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap()
+        self.api_client
             .post(&format!("{}/login", &self.address))
             .form(body)
             .send()
@@ -96,7 +93,7 @@ impl TestApp {
     }
 
     pub async fn get_login(&self) -> reqwest::Response {
-        self.api_client()
+        self.api_client
             .get(&format!("{}/login", &self.address))
             .send()
             .await
@@ -126,6 +123,14 @@ impl TestApp {
         self.api_client
             .post(&format!("{}/admin/password", &self.address))
             .form(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(&format!("{}/admin/lopgout", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
