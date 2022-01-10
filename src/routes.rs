@@ -17,3 +17,4 @@ pub use auth::login::login;
 pub use dashboard::admin_dashboard::admin_dashboard;
 pub use dashboard::password::change_password;
 pub use dashboard::password::change_password_form;
+pub use dashboard::logout::log_out;

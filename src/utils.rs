@@ -1,5 +1,5 @@
-use actix_web::header::LOCATION;
 use actix_web::HttpResponse;
+use reqwest::header::LOCATION;
 
 // Return an opaque 500 while preserving the error root cause for logging.
 pub fn e500<T>(e: T) -> actix_web::error::InternalError<T> {
