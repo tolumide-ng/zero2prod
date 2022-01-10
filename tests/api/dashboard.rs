@@ -1,4 +1,4 @@
-use crate::helpers::spawn_app;
+use crate::helpers::app::spawn_app;
 
 #[tokio::test]
 async fn you_must_be_logged_in_to_access_the_admin_dashboard() {
