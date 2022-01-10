@@ -33,7 +33,14 @@ pub async fn admin_dashboard(
                 <p>Welcome {}!</p>
                 <p>Available actions:</p>
                 <ol>
-                <li><a href="/admin/password">Change password</a></li>
+                    <li><a href="/admin/password">Change password</a></li>
+                    <li>
+                        <a href="javascript: document.logoutForm.submit()">Logout</a>
+                        <form name="logoutForm" action="/admin/logout" method="post" hidden="true">
+                        <input hidden type="submit" value="Logout" />
+                        </form>
+                    </li
+                    <li><a href="/admin/password">Change password</a></li>
                 </ol>
             </body>
             </html>"#,
@@ -43,7 +50,7 @@ pub async fn admin_dashboard(
 
 
 #[tracing::instrument(name = "Get username", skip(pool))]
-async fn get_username(
+pub async fn get_username(
     user_id: Uuid,
     pool: &PgPool
 ) -> Result<String, anyhow::Error> {
